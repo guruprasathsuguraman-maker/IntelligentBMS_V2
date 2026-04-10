@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>BMS V2 — Interactive Simulation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#09090f;--ink2:#0f111a;--ink3:#141821;--ink4:#1a1f2d;
+  --line:#1e2438;--line2:#26304a;--line3:#30405e;
+  --teal:#00c8a0;--teal2:#00e6b8;--teal-d:#007a62;--teal-bg:rgba(0,200,160,0.07);
+  --amber:#f59e0b;--amber2:#fcd34d;--amber-bg:rgba(245,158,11,0.08);
+  --red:#ef4444;--red2:#fca5a5;--red-bg:rgba(239,68,68,0.08);
+  --blue:#3b82f6;--blue2:#93c5fd;--purple:#a855f7;
+  --txt:#e8ecf4;--txt2:#9ba8c0;--txt3:#5a6a88;--txt4:#384058;
+  --fdisp:'Syne',sans-serif;--fmono:'DM Mono',monospace;--fbody:'Instrument Sans',sans-serif;
+  --r:6px;--r2:10px;--r3:14px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--txt);font-family:var(--fbody);font-size:14px}
+body{display:flex;flex-direction:column}
+
+header{
+  flex-shrink:0;height:52px;z-index:100;
+  background:var(--ink2);border-bottom:1px solid var(--line2);
+  display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+}
+.bmark{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--teal-d),var(--teal));display:flex;align-items:center;justify-content:center;font-family:var(--fdisp);font-size:11px;font-weight:800;color:#000;letter-spacing:-.5px;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:12px}
+.bname{font-family:var(--fdisp);font-size:15px;font-weight:700;letter-spacing:.04em}
+.bsub{font-family:var(--fmono);font-size:10px;color:var(--txt3);margin-top:1px}
+.hpills{display:flex;gap:5px}
+.hpill{padding:3px 11px;border:1px solid var(--line2);border-radius:var(--r);background:var(--ink3)}
+.hpill-v{font-family:var(--fdisp);font-size:13px;font-weight:600;color:var(--teal);line-height:1.2}
+.hpill-l{font-family:var(--fmono);font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;margin-top:1px}
+.hclock{font-family:var(--fmono);font-size:13px;color:var(--txt3);letter-spacing:.06em}
+
+main{flex:1;overflow:hidden;display:grid;grid-template-columns:290px 1fr;min-height:0}
+
+/* ── SIDEBAR ── */
+.sb{background:var(--ink2);border-right:1px solid var(--line2);display:flex;flex-direction:column;overflow-y:auto;padding:12px 10px;gap:8px}
+.sb::-webkit-scrollbar{width:3px}
+.sb::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px}
+
+.gauge-card{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:14px 12px 10px}
+.g-wrap{position:relative;width:158px;height:158px;margin:0 auto 10px}
+.g-svg{width:158px;height:158px}
+.g-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.g-km{font-family:var(--fdisp);font-size:26px;font-weight:800;line-height:1;letter-spacing:-1px}
+.g-unit{font-family:var(--fmono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--txt3);margin-top:1px}
+.g-soc{font-family:var(--fmono);font-size:11px;font-weight:500;margin-top:3px}
+.g-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.gg{background:var(--ink4);border:1px solid var(--line);border-radius:var(--r);padding:8px 9px}
+.gg-v{font-family:var(--fdisp);font-size:16px;font-weight:600;line-height:1}
+.gg-l{font-family:var(--fmono);font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+
+.sblk{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:12px 13px}
+.sh{font-family:var(--fmono);font-size:10px;font-weight:500;color:var(--teal);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px}
+.sh::before{content:'';width:2px;height:10px;background:var(--teal);border-radius:1px;flex-shrink:0}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(30,36,56,.6)}
+.srow:last-child{border:none}
+.sl{font-family:var(--fmono);font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em}
+.sv{font-family:var(--fdisp);font-size:15px;font-weight:600}
+
+.vbadge{background:var(--red-bg);border:1px solid rgba(239,68,68,.25);border-radius:var(--r2);padding:10px 12px;display:none}
+.vb-h{font-family:var(--fmono);font-size:10px;color:var(--red);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px}
+
+/* AEO sidebar — bigger, more readable */
+.aeo-crow{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px}
+.aeo-clbl{font-family:var(--fmono);font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em}
+.aeo-cv{font-family:var(--fdisp);font-size:24px;font-weight:700}
+.abar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:3px;position:relative}
+.abar-fill{height:100%;background:linear-gradient(90deg,var(--teal-d),var(--teal));transition:width .5s;border-radius:2px}
+.abar-thresh{position:absolute;left:80%;top:-4px;bottom:-4px;width:1.5px;background:rgba(245,158,11,.8)}
+.abar-note{font-family:var(--fmono);font-size:9px;color:var(--txt4);text-align:right;margin-bottom:8px}
+.awin-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.awin-lbl-t{font-family:var(--fmono);font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em}
+.awin-v{font-family:var(--fdisp);font-size:16px;font-weight:700;color:var(--teal)}
+.awin-bar{height:22px;background:var(--ink);border:1px solid var(--line);border-radius:var(--r);position:relative;overflow:hidden;margin-bottom:3px}
+.awin-fill{position:absolute;top:0;bottom:0;background:rgba(0,200,160,.18);border:1px solid rgba(0,200,160,.3);transition:all .5s}
+.awin-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--fmono);font-size:10px;color:var(--teal);font-weight:500}
+.awin-ticks{display:flex;justify-content:space-between;font-family:var(--fmono);font-size:8px;color:var(--txt4)}
+.astat-l{font-family:var(--fmono);font-size:10px;margin-top:6px;line-height:1.5}
+.anote{font-family:var(--fmono);font-size:10px;color:var(--txt3);margin-top:4px;line-height:1.5}
+
+.tlog-sc{max-height:160px;overflow-y:auto}
+.tlog-sc::-webkit-scrollbar{width:3px}
+.tlog-sc::-webkit-scrollbar-thumb{background:var(--line2)}
+.tlog-entry{border-left:2px solid var(--teal-d);padding:5px 8px;margin-bottom:4px;animation:si .2s ease}
+@keyframes si{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:translateX(0)}}
+.tlog-entry.bad{border-color:var(--red)}
+.tle-t{display:flex;justify-content:space-between;font-family:var(--fdisp);font-size:13px;font-weight:600}
+.tle-b{font-family:var(--fmono);font-size:10px;color:var(--txt3);margin-top:2px;line-height:1.5}
+
+/* ── RIGHT ── */
+.rp{display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.cz{flex-shrink:0;overflow-y:auto;padding:14px 16px 10px;max-height:56%}
+.cz::-webkit-scrollbar{width:3px}
+
+.scr{display:none;flex-direction:column;gap:10px}
+.scr.on{display:flex}
+
+.alert-bar{padding:9px 14px;border-radius:var(--r);font-family:var(--fbody);font-size:13px;font-weight:500;display:none;margin-bottom:4px}
+.alert-bar.on{display:block;animation:si .2s ease}
+.alert-bar.red{background:var(--red-bg);border:1px solid rgba(239,68,68,.3);color:var(--red2)}
+.alert-bar.amber{background:var(--amber-bg);border:1px solid rgba(245,158,11,.3);color:var(--amber2)}
+
+.sh2{font-family:var(--fdisp);font-size:20px;font-weight:700;letter-spacing:-.02em}
+.sh2s{font-family:var(--fmono);font-size:11px;color:var(--txt3);margin-top:3px}
+
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pcard{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:16px 13px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.pcard::after{content:'';position:absolute;inset:0;border-radius:inherit;border:2px solid transparent;transition:border-color .18s;pointer-events:none}
+.pcard:hover::after{border-color:var(--line2)}
+.pcard.sel::after{border-color:var(--teal)}
+.pcard.sel{background:var(--teal-bg)}
+.pico{font-size:22px;margin-bottom:8px}
+.pname{font-family:var(--fdisp);font-size:15px;font-weight:700;letter-spacing:-.01em}
+.prole{font-family:var(--fmono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.pspec{font-family:var(--fbody);font-size:12px;color:var(--txt2);margin-top:4px}
+
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.mbtn{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:14px 15px;cursor:pointer;display:flex;align-items:flex-start;gap:12px;transition:all .15s;position:relative}
+.mbtn::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:2px;background:transparent;border-radius:1px;transition:background .15s}
+.mbtn:hover{background:var(--ink4);border-color:var(--line2)}
+.mbtn:hover::before{background:var(--teal)}
+.mbtn.amb:hover::before{background:var(--amber)}
+.mbtn.dng:hover::before{background:var(--red)}
+.mbtn:active{transform:translateY(1px)}
+.mbtn.dis{opacity:.35;pointer-events:none}
+.mnum{font-family:var(--fdisp);font-size:28px;font-weight:800;color:var(--teal);flex-shrink:0;line-height:1}
+.mbtn.amb .mnum{color:var(--amber)}
+.mbtn.dng .mnum{color:var(--red)}
+.mtitle{font-family:var(--fdisp);font-size:14px;font-weight:700;letter-spacing:-.01em;margin-top:2px}
+.mdesc{font-family:var(--fmono);font-size:10px;color:var(--txt3);margin-top:4px}
+
+/* AEO popup */
+.aeopop{background:var(--ink4);border:1px solid rgba(0,200,160,.25);border-radius:var(--r2);padding:14px;display:none;box-shadow:0 0 40px rgba(0,200,160,.07)}
+.aeopop.on{display:block;animation:si .3s ease}
+.aept{font-family:var(--fdisp);font-size:15px;font-weight:700;color:var(--teal);margin-bottom:5px}
+.aepb{font-family:var(--fbody);font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:10px}
+.aprev{background:var(--ink);border:1px solid var(--line);border-radius:var(--r);padding:10px;margin-bottom:10px}
+.abar2{height:24px;background:var(--ink2);border-radius:var(--r);position:relative;overflow:hidden;margin-bottom:3px}
+.af2{position:absolute;top:0;bottom:0;background:rgba(0,200,160,.2);border-radius:var(--r)}
+.ac2{position:absolute;top:0;bottom:0;width:2px;background:var(--amber)}
+.al2{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--fmono);font-size:10px;color:var(--teal)}
+.apstats{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
+.aps{background:var(--ink2);border-radius:var(--r);padding:6px 8px;text-align:center}
+.apsv{font-family:var(--fdisp);font-size:16px;font-weight:700;color:var(--teal)}
+.apsl{font-family:var(--fmono);font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em}
+.apbtns{display:flex;gap:5px}
+.apbtn{flex:1;padding:10px;border:none;border-radius:var(--r);font-family:var(--fdisp);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.apbtn:active{transform:translateY(1px)}
+.ab-y{background:var(--teal);color:#000}.ab-y:hover{background:var(--teal2)}
+.ab-n{background:var(--ink);border:1px solid var(--line2);color:var(--txt3)}.ab-n:hover{border-color:var(--line3)}
+.ab-l{background:var(--amber-bg);border:1px solid rgba(245,158,11,.3);color:var(--amber)}
+
+/* Trip screen */
+.tblk{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:15px}
+.tlbl{font-family:var(--fmono);font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:8px}
+.kmrow{display:flex;gap:7px;align-items:center;margin-bottom:7px}
+.kminput{flex:1;padding:11px 14px;background:var(--ink);border:1px solid var(--line2);border-radius:var(--r);color:var(--txt);font-family:var(--fdisp);font-size:28px;font-weight:700;outline:none;text-align:center;transition:border-color .18s}
+.kminput:focus{border-color:var(--teal)}.kminput.err{border-color:var(--red);animation:shk .3s}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.kmunit{font-family:var(--fdisp);font-size:20px;font-weight:600;color:var(--txt3)}
+.kmps{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
+.kmp{padding:5px 13px;background:var(--ink);border:1px solid var(--line2);border-radius:999px;font-family:var(--fmono);font-size:11px;color:var(--txt3);cursor:pointer;transition:all .15s}
+.kmp:hover{border-color:var(--teal);color:var(--teal)}
+.rwbox{background:var(--red-bg);border:1px solid rgba(239,68,68,.25);border-radius:var(--r);padding:11px 13px;display:none;margin-bottom:7px}
+.rwbox.on{display:block;animation:si .25s ease}
+.rwt{font-family:var(--fdisp);font-size:14px;font-weight:600;color:var(--red2);margin-bottom:4px}
+.rwb{font-family:var(--fbody);font-size:12px;color:var(--txt2);line-height:1.5}
+.apreview{background:var(--teal-bg);border:1px solid rgba(0,200,160,.18);border-radius:var(--r);padding:10px 13px;display:none;margin-bottom:7px}
+.apreview.on{display:block}
+.aptag{font-family:var(--fmono);font-size:9px;color:var(--teal);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.apval{font-family:var(--fdisp);font-size:16px;font-weight:700;color:var(--teal)}
+.apsub{font-family:var(--fmono);font-size:10px;color:var(--txt3);margin-top:3px}
+.tres{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:13px;display:none}
+.tres.on{display:block;animation:si .3s ease}
+.trh{font-family:var(--fdisp);font-size:14px;font-weight:700;margin-bottom:9px}
+.trgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tri{background:var(--ink4);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px}
+.tril{font-family:var(--fmono);font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em}
+.triv{font-family:var(--fdisp);font-size:16px;font-weight:700;margin-top:3px}
+.mchg{background:var(--red-bg);border:1px solid rgba(239,68,68,.3);border-radius:var(--r2);padding:12px 14px;text-align:center;display:none}
+.mchg.on{display:block;animation:si .3s ease}
+.mcht{font-family:var(--fdisp);font-size:14px;font-weight:700;color:var(--red2);margin-bottom:4px}
+.mchs{font-family:var(--fbody);font-size:12px;color:var(--txt2)}
+
+/* Charge screen */
+.chblk{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:15px}
+.chinfo{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.chb{background:var(--ink4);border:1px solid var(--line);border-radius:var(--r);padding:9px 11px}
+.chl{font-family:var(--fmono);font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em}
+.chv{font-family:var(--fdisp);font-size:18px;font-weight:700;margin-top:4px}
+.chprog{height:28px;background:var(--ink);border:1px solid var(--line);border-radius:var(--r);position:relative;overflow:hidden}
+.chfill{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,var(--teal-d),var(--teal));transition:width .07s linear;border-radius:var(--r)}
+.chmark{position:absolute;top:0;bottom:0;width:2px;background:var(--amber)}
+.chlbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--fmono);font-size:11px;color:#fff;font-weight:500}
+
+/* Valet */
+.vpreset-row{display:flex;gap:7px;margin-bottom:10px}
+.vpre{flex:1;background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:12px;text-align:center;cursor:pointer;transition:all .15s}
+.vpre:hover{border-color:var(--line2)}.vpre.sel{border-color:var(--red);background:var(--red-bg)}
+.vpkm{font-family:var(--fdisp);font-size:22px;font-weight:700;color:var(--red2)}
+.vpname{font-family:var(--fmono);font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.pinsec{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:14px;margin-bottom:8px}
+.pinsec-t{font-family:var(--fmono);font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.pinlbl{font-family:var(--fmono);font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px}
+.pininput{width:100%;padding:11px 14px;background:var(--ink);border:1px solid var(--line2);border-radius:var(--r);color:var(--txt);font-family:var(--fdisp);font-size:22px;font-weight:700;text-align:center;letter-spacing:.3em;outline:none;margin-bottom:10px;transition:border-color .18s}
+.pininput:focus{border-color:var(--teal)}.pininput.err{border-color:var(--red);animation:shk .3s}
+.vactive-box{background:var(--red-bg);border:1px solid rgba(239,68,68,.25);border-radius:var(--r);padding:10px 12px;margin-bottom:9px;font-family:var(--fmono);font-size:11px;color:var(--red2);line-height:1.6}
+
+/* Buttons */
+.btn{width:100%;padding:11px 16px;border:none;border-radius:var(--r);font-family:var(--fdisp);font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .15s;margin-bottom:5px}
+.btn:active{transform:translateY(1px)}
+.btn-t{background:var(--teal);color:#000}.btn-t:hover{background:var(--teal2)}
+.btn-r{background:var(--red);color:#fff}.btn-r:hover{background:#f87171}
+.btn-g{background:transparent;border:1px solid var(--line2);color:var(--txt3)}.btn-g:hover{border-color:var(--line3);color:var(--txt2)}
+.brow{display:flex;gap:7px}.brow .btn{margin-bottom:0}
+
+/* Summary */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.si{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.sil{font-family:var(--fmono);font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em}
+.siv{font-family:var(--fdisp);font-size:20px;font-weight:700;color:var(--teal);margin-top:4px}
+
+/* ── DATA TOGGLE ── */
+.dtoggle{flex-shrink:0;padding:7px 16px;background:var(--ink2);border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.dtlbl{font-family:var(--fmono);font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;flex-shrink:0}
+.dtchips{display:flex;gap:5px}
+.dtchip{padding:4px 13px;background:transparent;border:1px solid var(--line2);border-radius:999px;font-family:var(--fmono);font-size:10px;color:var(--txt3);cursor:pointer;transition:all .15s}
+.dtchip:hover{border-color:var(--teal);color:var(--teal)}
+.dtchip.on{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+
+/* ── DATA PANELS ── */
+.darea{flex:1;overflow:hidden;padding:8px 14px 8px;display:none;gap:8px;min-height:0}
+.darea.on{display:grid;grid-template-columns:repeat(4,1fr)}
+.dc{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r2);padding:10px 12px;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.dch{font-family:var(--fmono);font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--line);flex-shrink:0}
+.mlrow{margin-bottom:7px}
+.mlt{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.mln{font-family:var(--fbody);font-size:11px;color:var(--txt2)}
+.mlv{font-family:var(--fmono);font-size:11px;font-weight:500}
+.mlb{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.mlbf{height:100%;border-radius:2px;transition:width .5s}
+.mlmeta{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}
+.mlm{background:var(--ink4);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px}
+.mlml{font-family:var(--fmono);font-size:9px;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em}
+.mlmv{font-family:var(--fdisp);font-size:14px;font-weight:700;color:var(--amber);margin-top:3px}
+.dtrow{margin-top:6px;display:flex;gap:5px}
+.dtb{flex:1;background:var(--ink4);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px}
+.dtbl{font-family:var(--fmono);font-size:9px;color:var(--txt3)}
+.dtbv{font-family:var(--fmono);font-size:11px;font-weight:500;margin-top:2px}
+
+/* EU Passport */
+.euhd{background:#003399;padding:8px;text-align:center;margin:-10px -12px 8px;border-radius:var(--r2) var(--r2) 0 0;flex-shrink:0}
+.eust{font-size:10px;color:#ffcc00;letter-spacing:2.5px}
+.eure{font-family:var(--fmono);font-size:9px;color:#99b3ff;margin-top:2px}
+.prows{flex:1;overflow-y:auto}
+.prows::-webkit-scrollbar{width:3px}
+.prow{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px}
+.prow:last-child{border:none}
+.pk{font-family:var(--fbody);color:var(--txt3)}
+.pv{font-family:var(--fmono);font-weight:500}
+.psohr{margin-top:7px;flex-shrink:0}
+.psohb{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.psohf{height:100%;background:linear-gradient(90deg,var(--teal-d),var(--teal));transition:width .5s;border-radius:2px}
+.psohlbl{font-family:var(--fmono);font-size:9px;color:var(--txt3);text-align:center;margin-top:3px}
+
+/* ThingSpeak */
+.tsf-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.tsf-list::-webkit-scrollbar{width:3px}
+.tsfield{background:var(--ink4);border:1px solid var(--line);border-radius:var(--r);padding:6px 9px;display:flex;justify-content:space-between;align-items:center}
+.tsfl{font-family:var(--fmono);font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em}
+.tsfv{font-family:var(--fdisp);font-size:15px;font-weight:700;color:var(--blue2)}
+.tstime{font-family:var(--fmono);font-size:9px;color:var(--txt4);margin-top:6px;text-align:right;flex-shrink:0}
+
+/* Log */
+.logstrip{flex-shrink:0;background:var(--ink2);border-top:1px solid var(--line);max-height:52px;overflow-y:auto;padding:4px 16px}
+.logstrip::-webkit-scrollbar{width:3px}
+.logline{font-family:var(--fmono);font-size:10px;padding:2px 0;border-bottom:1px solid rgba(30,36,56,.4);line-height:1.4}
+.logline.info{color:var(--txt3)}.logline.ok{color:var(--teal)}.logline.warn{color:var(--amber)}.logline.err{color:var(--red2)}
+
+/* Modals */
+.modal{display:none;position:fixed;inset:0;z-index:600;background:rgba(9,9,15,.85);backdrop-filter:blur(5px);align-items:center;justify-content:center}
+.modal.on{display:flex}
+.mbox{background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r3);padding:28px;width:340px;text-align:center;animation:si .25s ease;box-shadow:0 24px 64px rgba(0,0,0,.55)}
+.mbox.dng{border-color:rgba(239,68,68,.35)}
+.mbox.inf{border-color:rgba(0,200,160,.3)}
+.mico{font-size:30px;margin-bottom:10px}
+.mtit{font-family:var(--fdisp);font-size:18px;font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.msub{font-family:var(--fbody);font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:15px}
+.emlist{background:var(--red-bg);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);padding:10px 12px;margin-bottom:14px;text-align:left}
+.emitem{font-family:var(--fmono);font-size:11px;color:var(--red2);padding:2.5px 0;letter-spacing:.02em}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="bmark">BMS</div>
+    <div>
+      <div class="bname">BMS V2 — Interactive Simulation</div>
+      <div class="bsub">Guruprasath Suguraman · MSc SWF · Germany · mirrors run_interactive_sim.m exactly</div>
+    </div>
+  </div>
+  <div class="hpills">
+    <div class="hpill"><div class="hpill-v">NMC811</div><div class="hpill-l">Chemistry</div></div>
+    <div class="hpill"><div class="hpill-v">96S1P</div><div class="hpill-l">Topology</div></div>
+    <div class="hpill"><div class="hpill-v">353.3 V</div><div class="hpill-l">Nominal</div></div>
+    <div class="hpill"><div class="hpill-v">63.6 kWh</div><div class="hpill-l">Gross</div></div>
+    <div class="hpill"><div class="hpill-v">180 Ah</div><div class="hpill-l">Capacity</div></div>
+  </div>
+  <div class="hclock" id="hclock">--:--:--</div>
+</header>
+
+<main>
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sb">
+
+  <div class="gauge-card">
+    <div class="g-wrap">
+      <svg class="g-svg" viewBox="0 0 158 158">
+        <circle cx="79" cy="79" r="58" fill="none" stroke="#1a1f2d" stroke-width="9"/>
+        <line id="g-ceil-tick" x1="79" y1="15" x2="79" y2="27" stroke="rgba(245,158,11,0.7)" stroke-width="2.5" stroke-linecap="round" transform-origin="79 79" style="transition:transform .4s"/>
+        <circle id="g-arc" cx="79" cy="79" r="58" fill="none" stroke="#00c8a0" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 364" stroke-dashoffset="91" transform="rotate(-90 79 79)" style="transition:stroke-dasharray .5s,stroke .4s"/>
+      </svg>
+      <div class="g-inner">
+        <div class="g-km" id="g-km" style="color:var(--teal)">— km</div>
+        <div class="g-unit">range available</div>
+        <div class="g-soc" id="g-soc" style="color:var(--teal)">— SoC</div>
+      </div>
+    </div>
+    <div class="g-grid">
+      <div class="gg"><div class="gg-v" id="gg-soh" style="color:var(--teal)">100%</div><div class="gg-l">SoH</div></div>
+      <div class="gg"><div class="gg-v" id="gg-ceil" style="color:var(--amber)">90%</div><div class="gg-l">Ceiling</div></div>
+      <div class="gg"><div class="gg-v" id="gg-trips" style="color:var(--txt2)">0</div><div class="gg-l">Trips</div></div>
+      <div class="gg"><div class="gg-v" id="gg-km" style="color:var(--txt2)">0 km</div><div class="gg-l">Total driven</div></div>
+    </div>
+  </div>
+
+  <div class="vbadge" id="vbadge">
+    <div class="vb-h">🔒 Valet Mode Active</div>
+    <div class="srow"><div class="sl">Preset</div><div class="sv" style="color:var(--red2)" id="vb-pre">—</div></div>
+    <div class="srow"><div class="sl">Remaining</div><div class="sv" style="color:var(--red2)" id="vb-rem">—</div></div>
+  </div>
+
+  <div class="sblk">
+    <div class="sh">AEO — Adaptive Efficiency Optimizer</div>
+    <div class="aeo-crow">
+      <div class="aeo-clbl">Confidence</div>
+      <div class="aeo-cv" id="aeo-cv" style="color:var(--txt2)">0%</div>
+    </div>
+    <div class="abar"><div class="abar-fill" id="abar-fill" style="width:0%"></div><div class="abar-thresh"></div></div>
+    <div class="abar-note">80% threshold unlocks recommendation</div>
+    <div id="aeo-win-sec" style="display:none">
+      <div class="awin-row">
+        <div class="awin-lbl-t">Computed window</div>
+        <div class="awin-v" id="awin-v">—</div>
+      </div>
+      <div class="awin-bar"><div class="awin-fill" id="awin-fill" style="left:10%;right:10%"></div><div class="awin-lbl" id="awin-lbl">—</div></div>
+      <div class="awin-ticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+      <div class="astat-l" id="astat-l" style="color:var(--txt3)">—</div>
+    </div>
+    <div class="anote" id="anote">Driver 1 only — take trips to build confidence</div>
+  </div>
+
+  <div class="sblk">
+    <div class="sh">Session State</div>
+    <div class="srow"><div class="sl">Driver</div><div class="sv" id="ss-drv" style="color:var(--teal)">—</div></div>
+    <div class="srow"><div class="sl">SoC</div><div class="sv" id="ss-soc" style="color:var(--teal)">100.0%</div></div>
+    <div class="srow"><div class="sl">SoH</div><div class="sv" id="ss-soh" style="color:var(--txt2)">100.0%</div></div>
+    <div class="srow"><div class="sl">Ceiling</div><div class="sv" id="ss-ceil" style="color:var(--amber)">90%</div></div>
+  </div>
+
+  <div class="sblk" style="flex:1">
+    <div class="sh">Trip History</div>
+    <div class="tlog-sc" id="tlog">
+      <div style="font-family:var(--fmono);font-size:10px;color:var(--txt4);text-align:center;padding:12px;text-transform:uppercase;letter-spacing:.08em" id="tlog-empty">No trips yet</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ RIGHT ═══ -->
+<div class="rp">
+<div class="cz">
+  <div class="alert-bar" id="alert-bar">—</div>
+
+  <!-- PROFILE -->
+  <div class="scr on" id="s-profile">
+    <div><div class="sh2">Select Driver Profile</div><div class="sh2s">Driver 1 is the primary owner. AEO is active exclusively for Driver 1.</div></div>
+    <div class="pgrid">
+      <div class="pcard" id="pc-0" onclick="pickP(1,this)">
+        <div class="pico">🌿</div><div class="pname">Driver 1</div>
+        <div class="prole" style="color:var(--teal)">Primary Owner · AEO Enabled</div>
+        <div class="pspec">AEO analyses actual trip km</div>
+        <div class="pspec">Window adapts to your data</div>
+        <div class="pspec">Confidence builds over time</div>
+      </div>
+      <div class="pcard" id="pc-1" onclick="pickP(2,this)">
+        <div class="pico">⚡</div><div class="pname">Driver 2</div>
+        <div class="prole" style="color:var(--blue)">Full Default Range</div>
+        <div class="pspec">AEO suspended</div>
+        <div class="pspec">Standard 10–90% window</div>
+      </div>
+      <div class="pcard" id="pc-2" onclick="pickP(3,this)">
+        <div class="pico">🏎️</div><div class="pname">Driver 3</div>
+        <div class="prole" style="color:var(--amber)">Full Default Range</div>
+        <div class="pspec">AEO suspended</div>
+        <div class="pspec">Standard 10–90% window</div>
+      </div>
+    </div>
+    <button class="btn btn-t" onclick="confP()">Start Session →</button>
+  </div>
+
+  <!-- MENU -->
+  <div class="scr" id="s-menu">
+    <div><div class="sh2" id="mtitle">What do you want to do?</div><div class="sh2s" id="msub">—</div></div>
+    <div class="mgrid">
+      <div class="mbtn" id="mb1" onclick="goTrip()"><div class="mnum">1</div><div><div class="mtitle">Take a Trip</div><div class="mdesc" id="mb1d">Enter distance — AEO learns pattern</div></div></div>
+      <div class="mbtn" onclick="goTo('s-charge')"><div class="mnum" style="color:var(--teal)">2</div><div><div class="mtitle">Charge the Car</div><div class="mdesc">Charges to AEO ceiling if accepted</div></div></div>
+      <div class="mbtn" onclick="goTo('s-pswitch')"><div class="mnum">3</div><div><div class="mtitle">Switch Driver</div><div class="mdesc">Change to Driver 1, 2, or 3</div></div></div>
+      <div class="mbtn amb" onclick="goTo('s-valet')"><div class="mnum">4</div><div><div class="mtitle">Valet Mode</div><div class="mdesc">Set your PIN · Limit range</div></div></div>
+      <div class="mbtn" onclick="doAEOStatus()"><div class="mnum">5</div><div><div class="mtitle">AEO Status</div><div class="mdesc">View full AEO analysis in log</div></div></div>
+      <div class="mbtn dng" onclick="goTo('s-summary')"><div class="mnum">6</div><div><div class="mtitle">Stop Simulation</div><div class="mdesc">View session summary</div></div></div>
+    </div>
+    <div class="aeopop" id="aeopop">
+      <div class="aept" id="aept">✦ AEO Recommendation Ready</div>
+      <div class="aepb" id="aepb">—</div>
+      <div class="aprev">
+        <div class="abar2"><div class="af2" id="af2" style="left:10%;right:18%"></div><div class="ac2" id="ac2" style="left:80%"></div><div class="al2" id="al2">—</div></div>
+        <div style="display:flex;justify-content:space-between;font-family:var(--fmono);font-size:9px;color:var(--txt4);margin:3px 0 5px"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+        <div class="apstats">
+          <div class="aps"><div class="apsv" id="aplo">—</div><div class="apsl">SoC min</div></div>
+          <div class="aps"><div class="apsv" id="aphi">—</div><div class="apsl">AEO ceiling</div></div>
+          <div class="aps"><div class="apsv" id="apben">—</div><div class="apsl">Cycle life ↑</div></div>
+        </div>
+      </div>
+      <div class="apbtns">
+        <button class="apbtn ab-y" onclick="aeoR('yes')">✓ Accept</button>
+        <button class="apbtn ab-n" onclick="aeoR('no')">✗ Decline</button>
+        <button class="apbtn ab-l" onclick="aeoR('later')">Later</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRIP -->
+  <div class="scr" id="s-trip">
+    <div><div class="sh2">Take a Trip</div><div class="sh2s" id="tsub">Enter distance. AEO learns from every trip (Driver 1 only).</div></div>
+    <div class="tblk">
+      <label class="tlbl">Distance (km)</label>
+      <div class="kmrow">
+        <input type="number" class="kminput" id="kmin" placeholder="120" min="1" max="1500" oninput="onKm()">
+        <div class="kmunit">km</div>
+      </div>
+      <div class="kmps">
+        <div class="kmp" onclick="setKm(30)">30 km</div>
+        <div class="kmp" onclick="setKm(80)">80 km</div>
+        <div class="kmp" onclick="setKm(120)">120 km</div>
+        <div class="kmp" onclick="setKm(200)">200 km</div>
+        <div class="kmp" onclick="setKm(350)">350 km</div>
+        <div class="kmp" onclick="setKm(500)">500 km</div>
+      </div>
+      <div class="rwbox" id="rwbox"><div class="rwt" id="rwt">⚠ Range Warning</div><div class="rwb" id="rwb">—</div></div>
+      <div class="apreview" id="atprev"><div class="aptag">AEO — Implied Window After This Trip</div><div class="apval" id="atpv">—</div><div class="apsub" id="atps">—</div></div>
+    </div>
+    <div class="tres" id="tres"></div>
+    <div class="mchg" id="mchg"><div class="mcht">🔋 Battery Empty — Charge Required</div><div class="mchs">Car stopped at battery minimum. Use Option 2 to charge.</div></div>
+    <div class="brow">
+      <button class="btn btn-t" id="btngo" onclick="execCheck()" style="flex:2">▶ Go</button>
+      <button class="btn btn-g" onclick="goTo('s-menu')" style="flex:1">← Back</button>
+    </div>
+  </div>
+
+  <!-- CHARGE -->
+  <div class="scr" id="s-charge">
+    <div><div class="sh2">Charge the Car</div><div class="sh2s">Charges to AEO ceiling if accepted, otherwise default ceiling.</div></div>
+    <div class="chblk">
+      <div class="chinfo">
+        <div class="chb"><div class="chl">Current SoC</div><div class="chv" id="ch-soc" style="color:var(--amber)">—</div></div>
+        <div class="chb"><div class="chl">Target Ceiling</div><div class="chv" id="ch-ceil" style="color:var(--teal)">—</div></div>
+        <div class="chb"><div class="chl">AEO Status</div><div class="chv" id="ch-aeo" style="color:var(--txt2);font-size:15px">—</div></div>
+        <div class="chb"><div class="chl">Energy to Add</div><div class="chv" id="ch-e" style="color:var(--blue2)">—</div></div>
+      </div>
+      <div class="chprog"><div class="chfill" id="chfill" style="width:0%"></div><div class="chmark" id="chmark" style="left:90%"></div><div class="chlbl" id="chlbl">—</div></div>
+      <div style="font-family:var(--fmono);font-size:9px;color:var(--txt4);text-align:right;margin-top:4px">Amber mark = charge ceiling</div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-t" onclick="doCharge()" style="flex:2">🔌 Start Charging</button>
+      <button class="btn btn-g" onclick="goTo('s-menu')" style="flex:1">← Back</button>
+    </div>
+  </div>
+
+  <!-- PROFILE SWITCH -->
+  <div class="scr" id="s-pswitch">
+    <div><div class="sh2">Switch Driver</div><div class="sh2s">AEO is active only for Driver 1.</div></div>
+    <div class="pgrid">
+      <div class="pcard" onclick="switchD(1,this)"><div class="pico">🌿</div><div class="pname">Driver 1</div><div class="prole" style="color:var(--teal)">AEO Enabled</div><div class="pspec">Trips: <strong id="ps-t">0</strong></div><div class="pspec">Confidence: <strong id="ps-c">0%</strong></div></div>
+      <div class="pcard" onclick="switchD(2,this)"><div class="pico">⚡</div><div class="pname">Driver 2</div><div class="prole" style="color:var(--blue)">Default Range</div><div class="pspec">AEO suspended · 10–90%</div></div>
+      <div class="pcard" onclick="switchD(3,this)"><div class="pico">🏎️</div><div class="pname">Driver 3</div><div class="prole" style="color:var(--amber)">Default Range</div><div class="pspec">AEO suspended · 10–90%</div></div>
+    </div>
+    <button class="btn btn-g" onclick="goTo('s-menu')">← Back to Menu</button>
+  </div>
+
+  <!-- VALET -->
+  <div class="scr" id="s-valet">
+    <div><div class="sh2">Valet Mode</div><div class="sh2s">Set a range limit and create your own 4-digit PIN. Required to deactivate.</div></div>
+    <div id="vact">
+      <div class="vpreset-row">
+        <div class="vpre sel" id="vp0" onclick="setVP('workshop',10,this)"><div class="vpkm">10</div><div class="vpname">Workshop km</div></div>
+        <div class="vpre" id="vp1" onclick="setVP('valet',20,this)"><div class="vpkm">20</div><div class="vpname">Valet km</div></div>
+        <div class="vpre" id="vp2" onclick="setVP('testdrive',50,this)"><div class="vpkm">50</div><div class="vpname">Test Drive km</div></div>
+      </div>
+      <div class="pinsec">
+        <div class="pinsec-t">Create Your Owner PIN — 4 digits — needed to deactivate</div>
+        <label class="pinlbl">New PIN</label>
+        <input type="password" class="pininput" id="vpn1" placeholder="••••" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')">
+        <label class="pinlbl">Confirm PIN</label>
+        <input type="password" class="pininput" id="vpn2" placeholder="••••" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')">
+      </div>
+      <button class="btn btn-r" onclick="actValet()">🔒 Activate Valet Mode</button>
+    </div>
+    <div id="vdeact" style="display:none">
+      <div class="vactive-box" id="vabox">VALET ACTIVE — — km remaining</div>
+      <label class="pinlbl">Enter your PIN to deactivate</label>
+      <input type="password" class="pininput" id="vpnd" placeholder="••••" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')">
+      <button class="btn btn-r" onclick="deactValet()">🔓 Deactivate Valet</button>
+    </div>
+    <button class="btn btn-g" onclick="goTo('s-menu')">← Back</button>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="scr" id="s-summary">
+    <div><div class="sh2">Session Summary</div></div>
+    <div class="sgrid">
+      <div class="si"><div class="sil">Total Trips</div><div class="siv" id="sm-t">0</div></div>
+      <div class="si"><div class="sil">Total km Driven</div><div class="siv" id="sm-k">0</div></div>
+      <div class="si"><div class="sil">Final SoC</div><div class="siv" id="sm-s">—</div></div>
+      <div class="si"><div class="sil">Final SoH</div><div class="siv" id="sm-h">—</div></div>
+      <div class="si"><div class="sil">AEO Accepted</div><div class="siv" id="sm-a">No</div></div>
+      <div class="si"><div class="sil">AEO Window</div><div class="siv" id="sm-w" style="font-size:16px">—</div></div>
+    </div>
+    <div id="sm-det" style="display:none;background:var(--teal-bg);border:1px solid rgba(0,200,160,.18);border-radius:var(--r);padding:11px 13px;margin-bottom:10px;font-family:var(--fmono);font-size:11px;color:var(--txt2);line-height:1.7">—</div>
+    <button class="btn btn-t" onclick="restart()">↺ New Simulation</button>
+  </div>
+
+</div><!-- end cz -->
+
+<!-- DATA TOGGLE -->
+<div class="dtoggle">
+  <div class="dtlbl">Data Panels</div>
+  <div class="dtchips">
+    <div class="dtchip on" id="chip-soh" onclick="togPanel('soh',this)">SoH Chart</div>
+    <div class="dtchip on" id="chip-ml"  onclick="togPanel('ml',this)">ML Health</div>
+    <div class="dtchip on" id="chip-eu"  onclick="togPanel('eu',this)">EU Passport</div>
+    <div class="dtchip on" id="chip-ts"  onclick="togPanel('ts',this)">ThingSpeak</div>
+  </div>
+</div>
+
+<!-- DATA PANELS -->
+<div class="darea on" id="darea">
+  <div class="dc" id="dp-soh"><div class="dch">SoH Degradation</div><canvas id="soh-chart" style="flex:1;min-height:0"></canvas></div>
+  <div class="dc" id="dp-ml">
+    <div class="dch">ML Health Monitor</div>
+    <div class="mlrow"><div class="mlt"><span class="mln">SoH — GPR (R²=1.00)</span><span class="mlv" id="ml-soh" style="color:var(--amber)">100%</span></div><div class="mlb"><div class="mlbf" id="pb-soh" style="width:100%;background:linear-gradient(90deg,#7a3d15,var(--amber))"></div></div></div>
+    <div class="mlrow"><div class="mlt"><span class="mln">RUL — BiLSTM (R²=0.94)</span><span class="mlv" id="ml-rul" style="color:var(--purple)">1,500</span></div><div class="mlb"><div class="mlbf" id="pb-rul" style="width:100%;background:linear-gradient(90deg,#5533aa,var(--purple))"></div></div></div>
+    <div class="mlrow"><div class="mlt"><span class="mln">Anomaly — IsoForest</span><span class="mlv" id="ml-an" style="color:var(--teal)">0.562</span></div><div class="mlb"><div class="mlbf" id="pb-an" style="width:56%;background:linear-gradient(90deg,#0a4a2a,var(--teal))"></div></div></div>
+    <div class="mlmeta">
+      <div class="mlm"><div class="mlml">GPR R²</div><div class="mlmv">1.0000</div></div>
+      <div class="mlm"><div class="mlml">TFT R²</div><div class="mlmv">0.9368</div></div>
+      <div class="mlm"><div class="mlml">IF Recall</div><div class="mlmv">0.889</div></div>
+      <div class="mlm"><div class="mlml">RF Acc</div><div class="mlmv">100%</div></div>
+    </div>
+    <div class="dtrow">
+      <div class="dtb"><div class="dtbl">DT Divergence</div><div class="dtbv" id="dt-div" style="color:var(--teal)">0.000%</div></div>
+      <div class="dtb"><div class="dtbl">Status</div><div class="dtbv" id="dt-st" style="color:var(--teal)">SYNCED</div></div>
+    </div>
+  </div>
+  <div class="dc" id="dp-eu" style="padding:0;overflow:hidden">
+    <div class="euhd"><div class="eust">★ ★ EU BATTERY PASSPORT ★ ★</div><div class="eure">EU Regulation 2023/1542</div></div>
+    <div class="prows" style="padding:0 11px">
+      <div class="prow" style="padding-top:6px"><span class="pk">Battery ID</span><span class="pv" style="color:var(--amber);font-size:9px">BATT-EU-00000060FEA2</span></div>
+      <div class="prow"><span class="pk">Chemistry</span><span class="pv">NMC811</span></div>
+      <div class="prow"><span class="pk">Topology</span><span class="pv">96S1P</span></div>
+      <div class="prow"><span class="pk">Nominal V</span><span class="pv">353.3 V</span></div>
+      <div class="prow"><span class="pk">Capacity</span><span class="pv">180 Ah</span></div>
+      <div class="prow"><span class="pk">Gross Energy</span><span class="pv">63.6 kWh</span></div>
+      <div class="prow"><span class="pk">SoH Now</span><span class="pv" id="p-soh" style="color:var(--amber)">100%</span></div>
+      <div class="prow"><span class="pk">Cycle Count</span><span class="pv" id="p-cyc">0 cycles</span></div>
+      <div class="prow"><span class="pk">Rint Now</span><span class="pv" id="p-rint">0.200 mΩ/cell</span></div>
+      <div class="prow"><span class="pk">2nd Life</span><span class="pv" id="p-sl" style="color:var(--teal)">EV Active</span></div>
+      <div class="prow"><span class="pk">Repairability</span><span class="pv">2 bolts per cell</span></div>
+    </div>
+    <div class="psohr" style="padding:6px 11px 9px">
+      <div class="psohb"><div class="psohf" id="p-bar" style="width:100%"></div></div>
+      <div class="psohlbl" id="p-lbl">SoH: 100.0%</div>
+    </div>
+  </div>
+  <div class="dc" id="dp-ts">
+    <div class="dch">📡 ThingSpeak Live · Ch 3319380</div>
+    <div class="tsf-list">
+      <div class="tsfield"><span class="tsfl">SoC (%)</span><span class="tsfv" id="tsf1">--</span></div>
+      <div class="tsfield"><span class="tsfl">Voltage (V)</span><span class="tsfv" id="tsf2">--</span></div>
+      <div class="tsfield"><span class="tsfl">Current (A)</span><span class="tsfv" id="tsf3">--</span></div>
+      <div class="tsfield"><span class="tsfl">Temp (°C)</span><span class="tsfv" id="tsf4">--</span></div>
+      <div class="tsfield"><span class="tsfl">Alert Level</span><span class="tsfv" id="tsf5">--</span></div>
+      <div class="tsfield"><span class="tsfl">V Delta (mV)</span><span class="tsfv" id="tsf6">--</span></div>
+      <div class="tsfield"><span class="tsfl">CO₂ Saved (kg)</span><span class="tsfv" id="tsf7">--</span></div>
+      <div class="tsfield"><span class="tsfl">RUL (cycles)</span><span class="tsfv" id="tsf8">--</span></div>
+    </div>
+    <div class="tstime" id="tstime">Fetching live data…</div>
+  </div>
+</div>
+
+<div class="logstrip" id="logstrip"></div>
+</div><!-- end rp -->
+</main>
+
+<!-- ═══ MODALS ═══ -->
+<div class="modal" id="m-low">
+  <div class="mbox inf">
+    <div class="mico">🔋</div>
+    <div class="mtit" style="color:var(--teal)">Low Battery — 25% SoC</div>
+    <div class="msub" id="m-low-sub">Battery at 25%. Plan accordingly.</div>
+    <button class="btn btn-t" onclick="closeM('m-low')" style="margin-bottom:0">Understood — Plan Route</button>
+  </div>
+</div>
+
+<div class="modal" id="m-empty">
+  <div class="mbox dng">
+    <div class="mico">🚨</div>
+    <div class="mtit" style="color:var(--red2)">Battery Minimum Reached</div>
+    <div class="msub">Vehicle stopped. 2% emergency reserve preserved for critical systems only.</div>
+    <div class="emlist">
+      <div class="emitem">✓  Hazard lights — active</div>
+      <div class="emitem">✓  SOS emergency button — active</div>
+      <div class="emitem">✓  Interior courtesy lights — active</div>
+      <div class="emitem">✓  Telematics / call for help — active</div>
+      <div class="emitem">✗  Driving — DISABLED</div>
+    </div>
+    <button class="btn btn-r" onclick="closeM('m-empty');goTo('s-charge')" style="margin-bottom:6px">Charge the Car Now</button>
+    <button class="btn btn-g" onclick="closeM('m-empty')" style="margin-bottom:0">OK</button>
+  </div>
+</div>
+
+<div class="modal" id="m-rconf">
+  <div class="mbox dng">
+    <div class="mico">⚠️</div>
+    <div class="mtit" style="color:var(--red2)">Confirm Extended Trip</div>
+    <div class="msub" id="m-rconf-sub">—</div>
+    <button class="btn btn-r" onclick="doConfirmTrip()" style="margin-bottom:6px">Confirm — Run Until Battery Empty</button>
+    <button class="btn btn-g" onclick="closeM('m-rconf')" style="margin-bottom:0">Cancel — Adjust Distance</button>
+  </div>
+</div>
+
+<script>
+// ================================================================
+//  BMS V2 Interactive Simulation
+//  Author: Guruprasath Suguraman | MSc SWF | Germany
+//
+//  ════════════════════════════════════════════════════════════════
+//  RANGE MATHS — SINGLE SOURCE OF TRUTH (fixes the 347→195 bug)
+//
+//  Root cause of old bug:
+//    maxRange() used:  (SoC - SoC_min) * E_gross / kWh_per_km
+//    simTrip()  used:  I * dt / (3600 * Q_Ah)  per timestep
+//    These were two DIFFERENT consumption models → mismatch.
+//
+//  Fix: one constant SPC (SoC fraction per km) used everywhere.
+//    SPC = kWh_per_km / E_gross = 0.165 / 63.6
+//
+//    maxRange() = (SoC - SoC_min) / SPC
+//    simTrip()  drains  dk * SPC  per km step
+//
+//  Proof of correctness:
+//    range_before = (SoC_before - 0.10) / SPC
+//    after N km:  SoC_after = SoC_before - N*SPC
+//    range_after  = (SoC_after  - 0.10) / SPC
+//                 = (SoC_before - N*SPC - 0.10) / SPC
+//                 = range_before - N          ✓
+//
+//  So: driving 87 km from 347 km range → exactly 260 km left. ✓
+//  ════════════════════════════════════════════════════════════════
+
+const C={Q:180,V:353.28,E:63.6,kWh_km:.165,SoC_min:.10,Rth:.8,Cth:2205};
+const SPC=C.kWh_km/C.E; // 0.002594 SoC drained per km — THE ONLY RANGE CONSTANT
+
+let S={drv:0,SoC:1.0,SoH:1.0,trips:0,km:0,
+  aeoT:[],aeoC:0,aeoU:false,aeoA:false,aeoPP:false,
+  aeoLo:.10,aeoHi:.90,ceil:.90,
+  aeoAcceptedHi:.90,  // the ceiling at time of acceptance — used for drift check
+  driftTrips:0,       // trips logged AFTER acceptance
+  valet:false,vPre:'workshop',vKm:10,vUsed:0,vCut:false,vPIN:'',
+  mustCharge:false,lowShown:false,cycles:0};
+
+let sohH=[{c:0,s:1.0}],pendP=0,rwPending=false,pendKm=0;
+let vPreKm=10,vPreName='workshop',sohChart=null;
+
+// maxRange uses SPC — guaranteed consistent with simTrip
+function maxRange(){return Math.max(0,(S.SoC-C.SoC_min)/SPC);}
+
+// simTrip drains SPC per km — same constant
+function simTrip(dist){
+  let soc=S.SoC,T=25,Tp=25,done=0,early=false;
+  const Ri=.00020*(2-S.SoH);
+  // Thermal: use average current for 165 Wh/km at pack voltage
+  const Iavg=(C.kWh_km*1000)/C.V; // ~0.467 A (thermal only, very mild)
+  const step=0.5; // km per sub-step
+  const steps=Math.ceil(dist/step);
+  for(let k=0;k<steps;k++){
+    const dk=Math.min(step,dist-done);
+    const dt=dk/(50/3600); // time in seconds (50 km/h average)
+    soc-=dk*SPC;           // drain using SAME constant as maxRange
+    done+=dk;
+    if(soc<=C.SoC_min){soc=C.SoC_min;early=true;break;}
+    const Ph=Iavg*Iavg*Ri;
+    const dT=(Ph-(T-25)/C.Rth)/C.Cth*dt;
+    T=Math.max(25,Math.min(42,T+dT));
+    Tp=Math.max(Tp,T);
+  }
+  S.SoH=Math.max(.60,S.SoH-done*.00000015);
+  S.cycles+=done/300;
+  return{SoC:soc,Tp,done,early};
+}
+
+// ── AEO: window computed from actual trip km ─────────────────────
+function aeoWin(trips){
+  if(!trips.length)return{lo:.10,hi:.90,avg:0,E:0,sr:0};
+  const avg=trips.reduce((a,t)=>a+t.km,0)/trips.length;
+  const E=avg*C.kWh_km,sr=E/C.E;
+  return{lo:.10,hi:Math.min(.95,Math.max(.45,.10+sr+.10)),avg,E,sr};
+}
+function aeoConf(trips){
+  let c=0;trips.forEach(t=>c+=t.km<50?8:t.km<150?15:22);
+  if(trips.length>=3)c+=5;if(trips.length>=5)c+=5;if(trips.length>=8)c+=5;
+  return Math.min(c,99);
+}
+function lifeBen(hi){return Math.max(0,Math.round((1-hi)*100*.7));}
+
+// ── UI UPDATE ────────────────────────────────────────────────────
+function upd(){
+  const mr=maxRange(),soc=S.SoC,ceil=S.aeoA?S.aeoHi:S.ceil;
+  // Gauge arc — circumference of r=58 circle = 364.4
+  const circ=2*Math.PI*58;
+  const fill=(circ*soc).toFixed(1),gap=(circ*(1-soc)).toFixed(1);
+  document.getElementById('g-arc').setAttribute('stroke-dasharray',`${fill} ${gap}`);
+  document.getElementById('g-arc').setAttribute('stroke',soc>.50?'#00c8a0':soc>.25?'#f59e0b':'#ef4444');
+  // AEO ceiling tick rotates around gauge centre
+  const ceilAng=((ceil-C.SoC_min)/(1-C.SoC_min))*360;
+  document.getElementById('g-ceil-tick').setAttribute('transform',`rotate(${ceilAng} 79 79)`);
+  // Gauge text
+  const gk=document.getElementById('g-km');
+  gk.textContent=mr.toFixed(0)+' km';
+  gk.style.color=soc>.50?'var(--teal)':soc>.25?'var(--amber)':'var(--red2)';
+  const gs=document.getElementById('g-soc');
+  gs.textContent=(soc*100).toFixed(1)+'% SoC';
+  gs.style.color=soc>.50?'var(--teal)':soc>.25?'var(--amber)':'var(--red2)';
+  // Sidebar grid
+  document.getElementById('gg-soh').textContent=(S.SoH*100).toFixed(1)+'%';
+  document.getElementById('gg-soh').style.color=S.SoH>.80?'var(--teal)':S.SoH>.70?'var(--amber)':'var(--red2)';
+  document.getElementById('gg-ceil').textContent=(ceil*100).toFixed(0)+'%';
+  document.getElementById('gg-trips').textContent=S.trips;
+  document.getElementById('gg-km').textContent=S.km.toFixed(0)+' km';
+  // Session state
+  const dn=['—','Driver 1','Driver 2','Driver 3'];
+  document.getElementById('ss-drv').textContent=S.drv?dn[S.drv]:'—';
+  const se=document.getElementById('ss-soc');
+  se.textContent=(soc*100).toFixed(1)+'%';
+  se.style.color=soc>.50?'var(--teal)':soc>.25?'var(--amber)':'var(--red2)';
+  document.getElementById('ss-soh').textContent=(S.SoH*100).toFixed(1)+'%';
+  document.getElementById('ss-ceil').textContent=(ceil*100).toFixed(0)+'%';
+  // Alert bar
+  const ab=document.getElementById('alert-bar');
+  if(S.mustCharge){ab.textContent='🔋 Battery empty — use Option 2 to charge before driving';ab.className='alert-bar on red';}
+  else if(soc<=.15){ab.textContent='⚠ SoC critically low: '+(soc*100).toFixed(0)+'% — charge soon';ab.className='alert-bar on amber';}
+  else ab.className='alert-bar';
+  // Menu btn 1
+  const mb1=document.getElementById('mb1');
+  if(S.mustCharge||(S.valet&&S.vCut)){mb1.classList.add('dis');document.getElementById('mb1d').textContent=S.mustCharge?'⚠ Must charge before next trip':'⚠ Valet power cut';}
+  else{mb1.classList.remove('dis');document.getElementById('mb1d').textContent='Range: '+mr.toFixed(0)+' km available';}
+  // Valet badge
+  const vb=document.getElementById('vbadge');
+  if(S.valet){vb.style.display='block';document.getElementById('vb-pre').textContent=S.vPre;document.getElementById('vb-rem').textContent=(S.vKm-S.vUsed).toFixed(1)+' km';}
+  else vb.style.display='none';
+  updAEO();updPassport();updML();
+}
+
+function updAEO(){
+  if(S.drv!==1){
+    document.getElementById('aeo-cv').textContent='N/A';
+    document.getElementById('abar-fill').style.width='0%';
+    document.getElementById('anote').textContent='AEO active for Driver 1 only';
+    document.getElementById('aeo-win-sec').style.display='none';return;
+  }
+  const n=S.aeoT.length,c=S.aeoC;
+  document.getElementById('abar-fill').style.width=Math.min(c,100)+'%';
+  const cv=document.getElementById('aeo-cv');
+  cv.textContent=c.toFixed(0)+'%';
+  cv.style.color=c>=80?'var(--teal)':c>=50?'var(--amber)':'var(--txt2)';
+  document.getElementById('anote').textContent=n?`${n} trip${n>1?'s':''} · avg ${(S.aeoT.reduce((a,t)=>a+t.km,0)/n).toFixed(0)} km`:'Take trips to build AEO confidence';
+  if(!n){document.getElementById('aeo-win-sec').style.display='none';return;}
+  const w=aeoWin(S.aeoT);
+  const lo=Math.round(w.lo*100),hi=Math.round(w.hi*100);
+  document.getElementById('aeo-win-sec').style.display='block';
+  document.getElementById('awin-v').textContent=lo+'% – '+hi+'%';
+  document.getElementById('awin-fill').style.left=lo+'%';
+  document.getElementById('awin-fill').style.right=(100-hi)+'%';
+  document.getElementById('awin-lbl').textContent=lo+'% ──── '+hi+'%';
+  const sl=document.getElementById('astat-l');
+  if(S.aeoA){sl.textContent='✓ Accepted — ceiling locked to '+hi+'%';sl.style.color='var(--teal)';}
+  else if(S.aeoU){sl.textContent='Popup pending — recommendation above';sl.style.color='var(--amber)';}
+  else{sl.textContent='Confidence '+c.toFixed(0)+'% — need 80% to unlock';sl.style.color='var(--txt3)';}
+}
+
+function updPassport(){
+  const soh=(S.SoH*100).toFixed(1),rint=(0.20*(2-S.SoH)).toFixed(3);
+  let sl='EV Active',slc='var(--teal)';
+  if(S.SoH<.60){sl='Recycle';slc='var(--red2)';}
+  else if(S.SoH<.70){sl='Industrial Backup';slc='var(--amber)';}
+  else if(S.SoH<.80){sl='Grid Storage';slc='var(--blue2)';}
+  document.getElementById('p-soh').textContent=soh+'%';
+  document.getElementById('p-cyc').textContent=Math.round(S.cycles)+' cycles';
+  document.getElementById('p-rint').textContent=rint+' mΩ/cell';
+  document.getElementById('p-sl').textContent=sl;
+  document.getElementById('p-sl').style.color=slc;
+  document.getElementById('p-bar').style.width=soh+'%';
+  document.getElementById('p-lbl').textContent='SoH: '+soh+'%';
+}
+
+function updML(){
+  const soh=(S.SoH*100).toFixed(1)+'%';
+  const rul=Math.max(0,Math.round(1500*S.SoH-S.cycles));
+  document.getElementById('ml-soh').textContent=soh;
+  document.getElementById('pb-soh').style.width=(S.SoH*100)+'%';
+  document.getElementById('ml-rul').textContent=rul.toLocaleString();
+  document.getElementById('pb-rul').style.width=(S.SoH*100)+'%';
+  const d=(Math.random()*.05).toFixed(3);
+  document.getElementById('dt-div').textContent=d+'%';
+  const sy=parseFloat(d)<.18;
+  document.getElementById('dt-st').textContent=sy?'SYNCED':'⚠ DIVERGING';
+  document.getElementById('dt-st').style.color=sy?'var(--teal)':'var(--red2)';
+}
+
+// ── SoH CHART ────────────────────────────────────────────────────
+function initChart(){
+  const ctx=document.getElementById('soh-chart').getContext('2d');
+  sohChart=new Chart(ctx,{
+    type:'line',
+    data:{labels:['0'],datasets:[{data:[100],borderColor:'#00c8a0',borderWidth:2,pointRadius:3,pointBackgroundColor:'#00c8a0',fill:true,backgroundColor:'rgba(0,200,160,0.06)',tension:.4}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(30,36,56,.8)'},ticks:{color:'#384058',font:{family:'DM Mono',size:9}},title:{display:true,text:'Cumulative Cycles',color:'#384058',font:{size:9}}},
+        y:{grid:{color:'rgba(30,36,56,.8)'},ticks:{color:'#384058',font:{family:'DM Mono',size:9}},min:55,max:103,title:{display:true,text:'SoH (%)',color:'#384058',font:{size:9}}}
+      }}
+  });
+}
+function updChart(){
+  if(!sohChart)return;
+  sohChart.data.labels=sohH.map(p=>p.c.toFixed(1));
+  sohChart.data.datasets[0].data=sohH.map(p=>p.s*100);
+  sohChart.update('none');
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────────
+function goTo(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  if(id==='s-charge')setupCharge();
+  if(id==='s-pswitch'){document.getElementById('ps-t').textContent=S.aeoT.length;document.getElementById('ps-c').textContent=S.aeoC.toFixed(0)+'%';}
+  if(id==='s-valet')setupValet();
+  if(id==='s-summary')setupSummary();
+  if(id==='s-trip'){
+    document.getElementById('tres').className='tres';
+    document.getElementById('mchg').className='mchg';
+    document.getElementById('rwbox').className='rwbox';
+    document.getElementById('atprev').className='apreview';
+    document.getElementById('kmin').value='';
+    document.getElementById('btngo').textContent='▶ Go';
+    rwPending=false;
+    const mr=maxRange();
+    document.getElementById('tsub').textContent=`Available: ${mr.toFixed(0)} km · SoC: ${(S.SoC*100).toFixed(1)}%`;
+  }
+}
+
+// ── PROFILE ──────────────────────────────────────────────────────
+function pickP(id,el){pendP=id;document.querySelectorAll('#s-profile .pcard').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');}
+function confP(){
+  if(!pendP){alert('Select a driver profile');return;}
+  S.drv=pendP;
+  const n=['—','Driver 1 — Primary Owner','Driver 2 — Full Range','Driver 3 — Full Range'];
+  document.getElementById('mtitle').textContent='What do you want to do?';
+  document.getElementById('msub').textContent=n[S.drv]+' active';
+  log(S.drv===1?'AEO enabled — take trips to build confidence':'AEO suspended — default 10–90% window','ok');
+  goTo('s-menu');upd();
+}
+function switchD(id,el){
+  S.drv=id;if(id!==1){S.ceil=.90;log('Driver '+id+' — AEO suspended','info');}
+  else log('Driver 1 — AEO resumed','ok');
+  const n=['—','Driver 1','Driver 2','Driver 3'];
+  document.getElementById('msub').textContent=n[id]+' active';
+  upd();goTo('s-menu');
+}
+
+// ── TRIP ─────────────────────────────────────────────────────────
+function goTrip(){
+  if(S.mustCharge){log('Must charge before next trip','err');return;}
+  if(S.valet&&S.vCut){log('Valet power cut — deactivate first','err');return;}
+  rwPending=false;goTo('s-trip');
+}
+function setKm(v){document.getElementById('kmin').value=v;onKm();rwPending=false;}
+function onKm(){
+  rwPending=false;
+  document.getElementById('btngo').textContent='▶ Go';
+  document.getElementById('rwbox').className='rwbox';
+  const km=parseFloat(document.getElementById('kmin').value);
+  const mr=maxRange();
+  if(!km||km<1){document.getElementById('atprev').className='apreview';return;}
+  if(km>mr){
+    document.getElementById('rwbox').className='rwbox on';
+    document.getElementById('rwt').textContent=`⚠ ${km.toFixed(0)} km requested — only ${mr.toFixed(0)} km available`;
+    document.getElementById('rwb').textContent=`At SoC ${(S.SoC*100).toFixed(1)}%, max range is ${mr.toFixed(0)} km. Confirming runs until battery minimum — car stops there. Click Go again to confirm.`;
+    document.getElementById('btngo').textContent='⚠ Confirm & Go';
+    rwPending=true;
+  }
+  if(S.drv===1){
+    const tw=[...S.aeoT,{km}],w=aeoWin(tw),cf=aeoConf(tw);
+    const avg=tw.reduce((a,t)=>a+t.km,0)/tw.length;
+    document.getElementById('atprev').className='apreview on';
+    document.getElementById('atpv').textContent=`Implied ceiling after this trip: ${Math.round(w.hi*100)}%`;
+    document.getElementById('atps').textContent=`Avg ${avg.toFixed(0)} km · Energy ${w.E.toFixed(1)} kWh · Confidence after: ${cf.toFixed(0)}%`;
+  } else document.getElementById('atprev').className='apreview';
+}
+function execCheck(){
+  const el=document.getElementById('kmin');let km=parseFloat(el.value);
+  if(!km||km<1){el.classList.add('err');setTimeout(()=>el.classList.remove('err'),1000);return;}
+  const mr=maxRange();
+  if(km>mr&&rwPending){
+    pendKm=km;
+    document.getElementById('m-rconf-sub').textContent=`You requested ${km.toFixed(0)} km but only ${mr.toFixed(0)} km is available from SoC ${(S.SoC*100).toFixed(1)}%. The trip runs until battery minimum, then stops. Emergency systems remain powered.`;
+    openM('m-rconf');return;
+  }
+  if(km>mr){onKm();return;}
+  doTrip(km);
+}
+function doConfirmTrip(){closeM('m-rconf');doTrip(pendKm);}
+function doTrip(km){
+  if(S.valet){const rem=S.vKm-S.vUsed;if(km>rem){log(`Valet: reducing to ${rem.toFixed(1)} km`,'warn');km=rem;}}
+  const ss=S.SoC;log(`Simulating ${km.toFixed(0)} km…`);
+  const r=simTrip(km);S.SoC=r.SoC;S.trips++;S.km+=r.done;
+  sohH.push({c:S.cycles,s:S.SoH});updChart();
+  if(S.valet){S.vUsed+=r.done;if(S.vUsed>=S.vKm){S.vCut=true;log('Valet range exhausted','err');}}
+  let conf=S.aeoC,win=aeoWin(S.aeoT);
+  if(S.drv===1&&!S.valet){
+    S.aeoT.push({km:r.done});S.aeoC=aeoConf(S.aeoT);conf=S.aeoC;win=aeoWin(S.aeoT);
+    S.aeoLo=win.lo;S.aeoHi=win.hi;
+    // First unlock
+    if(S.aeoC>=80&&!S.aeoU){S.aeoU=true;S.aeoPP=true;log('AEO confidence ≥ 80% — recommendation ready!','ok');}
+    // Drift re-check after acceptance (mirrors aeo.checkDrift())
+    // Every 3 trips after acceptance, check if the new computed window
+    // differs from the accepted ceiling by more than 5% — if so, fire new popup
+    if(S.aeoA){
+      S.driftTrips++;
+      if(S.driftTrips>=3){
+        S.driftTrips=0;
+        const newHi=win.hi;
+        const diff=Math.abs(newHi-S.aeoAcceptedHi);
+        if(diff>0.05){
+          // Habit has drifted — new recommendation differs meaningfully
+          S.aeoPP=true;
+          log(`AEO drift detected — new window ${Math.round(win.lo*100)}%–${Math.round(newHi*100)}% differs from accepted ${Math.round(S.aeoAcceptedHi*100)}% by ${Math.round(diff*100)}%`,'warn');
+          log('AEO will ask about updated window before next trip','info');
+        } else {
+          log(`AEO drift check — window stable at ${Math.round(win.lo*100)}%–${Math.round(newHi*100)}% (within 5% of accepted)·no change`,'info');
+        }
+      }
+    }
+  }
+  // 25% warning — one time per charge cycle
+  if(S.SoC<=.25&&!S.lowShown){
+    S.lowShown=true;const mr2=maxRange();
+    document.getElementById('m-low-sub').textContent=`Battery at ${(S.SoC*100).toFixed(0)}% SoC. Only ${mr2.toFixed(0)} km remaining. Plan your route — charge before the next long trip.`;
+    openM('m-low');
+  }
+  // Empty check
+  if(r.early||S.SoC<=C.SoC_min){S.mustCharge=true;document.getElementById('mchg').className='mchg on';openM('m-empty');log('Battery minimum — emergency reserve active — mandatory charge required','err');}
+  // Trip result card
+  const tr=document.getElementById('tres');tr.className='tres on';
+  tr.innerHTML=`<div class="trh" style="color:${r.early?'var(--red2)':'var(--teal)'}">${r.early?'⚠ Trip Ended Early':'✓ Trip Complete'}</div>
+    <div class="trgrid">
+      <div class="tri"><div class="tril">Requested</div><div class="triv" style="color:var(--amber)">${km.toFixed(0)} km</div></div>
+      <div class="tri"><div class="tril">Actual km</div><div class="triv" style="color:${r.early?'var(--red2)':'var(--teal)'}">${r.done.toFixed(0)} km</div></div>
+      <div class="tri"><div class="tril">Peak Temp</div><div class="triv" style="color:var(--amber)">${r.Tp.toFixed(1)} °C</div></div>
+      <div class="tri"><div class="tril">SoC Start</div><div class="triv" style="color:var(--txt2)">${(ss*100).toFixed(1)}%</div></div>
+      <div class="tri"><div class="tril">SoC End</div><div class="triv" style="color:${S.SoC<=C.SoC_min?'var(--red2)':'var(--teal)'}">${(S.SoC*100).toFixed(1)}%</div></div>
+      <div class="tri"><div class="tril">AEO Ceiling</div><div class="triv" style="color:var(--blue2)">${Math.round(win.hi*100)}%</div></div>
+    </div>`;
+  addTLog(r.done,ss,S.SoC,conf,win,r.early);
+  log(`Trip ${S.trips} — ${r.done.toFixed(0)} km · ${(ss*100).toFixed(0)}% → ${(S.SoC*100).toFixed(0)}%`,r.early?'warn':'ok');
+  rwPending=false;document.getElementById('btngo').textContent='▶ Go';document.getElementById('rwbox').className='rwbox';
+  upd();
+  setTimeout(()=>{goTo('s-menu');if(S.aeoPP)showAEOPop();},2500);
+}
+function addTLog(km,ss,se,c,w,early){
+  const tl=document.getElementById('tlog');document.getElementById('tlog-empty')?.remove();
+  const d=document.createElement('div');d.className='tlog-entry'+(early?' bad':'');
+  d.innerHTML=`<div class="tle-t"><span>Trip ${S.trips}${early?' ⚠':''}</span><span style="color:var(--teal)">${km.toFixed(0)} km</span></div>
+    <div class="tle-b">SoC ${(ss*100).toFixed(0)}%→${(se*100).toFixed(0)}%${S.drv===1?` · Ceil: ${Math.round(w.hi*100)}% · Conf: ${c.toFixed(0)}%`:''}${early?' · EMPTY':''}</div>`;
+  tl.insertBefore(d,tl.firstChild);
+}
+
+// ── AEO POPUP ────────────────────────────────────────────────────
+function showAEOPop(){
+  const w=aeoWin(S.aeoT),lo=Math.round(w.lo*100),hi=Math.round(w.hi*100),ben=lifeBen(w.hi),n=S.aeoT.length;
+  const isDrift=S.aeoA; // already accepted before → this is a drift update
+  document.getElementById('aept').textContent=isDrift
+    ?'↺ AEO Drift Detected — Update Window?'
+    :'✦ AEO Recommendation Ready';
+  const prev=Math.round(S.aeoAcceptedHi*100);
+  document.getElementById('aepb').textContent=isDrift
+    ?`Your driving pattern has changed. Based on ${n} trips (avg ${w.avg.toFixed(0)} km), the new optimal window is ${lo}%–${hi}%, compared to your accepted ${prev}%. Difference: ${Math.abs(hi-prev)}%. Accept to update your charge ceiling.`
+    :`Based on ${n} trip${n>1?'s':''} (avg ${w.avg.toFixed(0)} km each), AEO calculated energy need as ${w.E.toFixed(1)} kWh/trip — SoC range ${(w.sr*100).toFixed(0)}% + 10% safety buffer. Recommended window: ${lo}%–${hi}%. Expected cycle life benefit: +${ben}%.`;
+  document.getElementById('af2').style.left=lo+'%';document.getElementById('af2').style.right=(100-hi)+'%';
+  document.getElementById('ac2').style.left=(S.SoC*100)+'%';document.getElementById('al2').textContent=lo+'% ──── '+hi+'%';
+  document.getElementById('aplo').textContent=lo+'%';document.getElementById('aphi').textContent=hi+'%';document.getElementById('apben').textContent=isDrift?`was ${prev}%`:'+'+ben+'%';
+  document.getElementById('aeopop').classList.add('on');
+}
+function aeoR(c){
+  document.getElementById('aeopop').classList.remove('on');S.aeoPP=false;
+  const w=aeoWin(S.aeoT);
+  if(c==='yes'){
+    const wasAccepted=S.aeoA;
+    S.aeoA=true;S.aeoHi=w.hi;S.aeoLo=w.lo;S.ceil=w.hi;
+    S.aeoAcceptedHi=w.hi; // record for drift comparison
+    S.driftTrips=0;        // reset drift counter
+    S.lowShown=false;
+    log((wasAccepted?'AEO window updated':'AEO accepted')+' — ceiling: '+Math.round(w.hi*100)+'%','ok');
+  } else if(c==='no'){
+    S.driftTrips=0; // reset drift counter, keep existing window
+    log(S.aeoA?'AEO drift declined — keeping existing ceiling '+Math.round(S.ceil*100)+'%':'AEO declined','info');
+  } else {
+    S.aeoPP=true;log('AEO deferred — will ask again after next 3 trips','info');
+  }
+  upd();
+}
+function doAEOStatus(){
+  const w=aeoWin(S.aeoT),n=S.aeoT.length;
+  log('═══ AEO STATUS ═══','ok');
+  log(`Driver ${S.drv} · Trips: ${n} · Avg: ${w.avg.toFixed(0)} km · E: ${w.E.toFixed(1)} kWh`,'info');
+  log(`Confidence: ${S.aeoC.toFixed(0)}% · Window: ${Math.round(w.lo*100)}%–${Math.round(w.hi*100)}%`,'info');
+  log(`Accepted: ${S.aeoA} · Active ceiling: ${Math.round(S.ceil*100)}%`+(S.aeoA?` · Drift trips: ${S.driftTrips}/3`:''),'info');
+}
+
+// ── CHARGE ───────────────────────────────────────────────────────
+function setupCharge(){
+  const c=S.aeoA?S.aeoHi:S.ceil,e=Math.max(0,c-S.SoC)*C.E;
+  document.getElementById('ch-soc').textContent=(S.SoC*100).toFixed(1)+'%';
+  document.getElementById('ch-ceil').textContent=(c*100).toFixed(0)+'%';
+  document.getElementById('ch-aeo').textContent=S.aeoA?'ON ✓':'OFF';
+  document.getElementById('ch-e').textContent=e.toFixed(1)+' kWh';
+  document.getElementById('chfill').style.width=(S.SoC*100)+'%';
+  document.getElementById('chmark').style.left=(c*100)+'%';
+  document.getElementById('chlbl').textContent=(S.SoC*100).toFixed(1)+'% → '+(c*100).toFixed(0)+'%';
+}
+function doCharge(){
+  const c=S.aeoA?S.aeoHi:S.ceil;
+  if(S.SoC>=c){log('Already at ceiling','info');goTo('s-menu');return;}
+  S.mustCharge=false;S.lowShown=false;
+  log('Charging to '+(c*100).toFixed(0)+'%…','info');
+  const iv=setInterval(()=>{
+    S.SoC=Math.min(S.SoC+.02,c);
+    document.getElementById('chfill').style.width=(S.SoC*100)+'%';
+    document.getElementById('chlbl').textContent=(S.SoC*100).toFixed(1)+'%';
+    if(S.SoC>=c){clearInterval(iv);log('Charging complete — '+(S.SoC*100).toFixed(0)+'%','ok');upd();setTimeout(()=>goTo('s-menu'),600);}
+  },55);
+}
+
+// ── VALET ────────────────────────────────────────────────────────
+function setVP(n,km,el){vPreKm=km;vPreName=n;document.querySelectorAll('.vpre').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');}
+function setupValet(){
+  if(S.valet){document.getElementById('vact').style.display='none';document.getElementById('vdeact').style.display='block';document.getElementById('vabox').textContent=`VALET ACTIVE — ${S.vPre} · ${(S.vKm-S.vUsed).toFixed(1)} km remaining`;}
+  else{document.getElementById('vact').style.display='block';document.getElementById('vdeact').style.display='none';}
+}
+function actValet(){
+  const p1=document.getElementById('vpn1').value,p2=document.getElementById('vpn2').value;
+  if(p1.length<4){alert('PIN must be 4 digits');return;}
+  if(p1!==p2){const el=document.getElementById('vpn2');el.classList.add('err');setTimeout(()=>el.classList.remove('err'),500);log('PINs do not match','err');return;}
+  S.vPIN=p1;S.valet=true;S.vPre=vPreName;S.vKm=vPreKm;S.vUsed=0;S.vCut=false;
+  document.getElementById('vpn1').value='';document.getElementById('vpn2').value='';
+  log(`Valet activated — ${vPreName} (${vPreKm} km) · PIN set by user`,'warn');upd();goTo('s-menu');
+}
+function deactValet(){
+  const p=document.getElementById('vpnd').value;
+  if(p!==S.vPIN){const el=document.getElementById('vpnd');el.classList.add('err');setTimeout(()=>el.classList.remove('err'),500);log('Wrong PIN','err');return;}
+  S.valet=false;S.vCut=false;S.vUsed=0;S.vPIN='';document.getElementById('vpnd').value='';
+  log('Valet deactivated','ok');upd();goTo('s-menu');
+}
+
+// ── SUMMARY ──────────────────────────────────────────────────────
+function setupSummary(){
+  document.getElementById('sm-t').textContent=S.trips;
+  document.getElementById('sm-k').textContent=S.km.toFixed(0)+' km';
+  document.getElementById('sm-s').textContent=(S.SoC*100).toFixed(1)+'%';
+  document.getElementById('sm-h').textContent=(S.SoH*100).toFixed(1)+'%';
+  document.getElementById('sm-a').textContent=S.aeoA?'Yes':'No';
+  const w=aeoWin(S.aeoT);
+  if(S.aeoA){
+    document.getElementById('sm-w').textContent=Math.round(w.lo*100)+'% – '+Math.round(w.hi*100)+'%';
+    const d=document.getElementById('sm-det');d.style.display='block';
+    d.textContent=`${S.aeoT.length} trips · avg ${w.avg.toFixed(0)} km · energy ${w.E.toFixed(1)} kWh/trip · ceiling ${Math.round(w.hi*100)}% · projected +${lifeBen(w.hi)}% cycle life`;
+  } else document.getElementById('sm-w').textContent='—';
+  log('Simulation stopped by user','info');
+}
+function restart(){
+  S={drv:0,SoC:1.0,SoH:1.0,trips:0,km:0,aeoT:[],aeoC:0,aeoU:false,aeoA:false,aeoPP:false,aeoLo:.10,aeoHi:.90,ceil:.90,aeoAcceptedHi:.90,driftTrips:0,valet:false,vPre:'workshop',vKm:10,vUsed:0,vCut:false,vPIN:'',mustCharge:false,lowShown:false,cycles:0};
+  sohH=[{c:0,s:1.0}];pendP=0;rwPending=false;
+  document.querySelectorAll('#s-profile .pcard').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('logstrip').innerHTML='';
+  document.getElementById('tlog').innerHTML='<div style="font-family:var(--fmono);font-size:10px;color:var(--txt4);text-align:center;padding:12px;text-transform:uppercase;letter-spacing:.08em" id="tlog-empty">No trips yet</div>';
+  document.getElementById('aeopop').classList.remove('on');
+  document.getElementById('alert-bar').className='alert-bar';
+  document.getElementById('sm-det').style.display='none';
+  updChart();upd();goTo('s-profile');
+}
+
+// ── DATA PANEL TOGGLE ─────────────────────────────────────────────
+const dPanels={soh:'dp-soh',ml:'dp-ml',eu:'dp-eu',ts:'dp-ts'};
+function togPanel(k,chip){
+  const isOn=chip.classList.toggle('on');
+  document.getElementById(dPanels[k]).style.display=isOn?'flex':'none';
+  const vis=Object.keys(dPanels).filter(x=>document.getElementById('chip-'+x).classList.contains('on')).length;
+  const da=document.getElementById('darea');
+  if(!vis){da.className='darea';}
+  else{da.className='darea on';da.style.gridTemplateColumns=Array(vis).fill('1fr').join(' ');}
+}
+
+// ── MODALS ───────────────────────────────────────────────────────
+function openM(id){document.getElementById(id).classList.add('on');}
+function closeM(id){document.getElementById(id).classList.remove('on');}
+
+// ── LOG ──────────────────────────────────────────────────────────
+function log(msg,type='info'){
+  const ls=document.getElementById('logstrip');
+  const d=document.createElement('div');d.className='logline '+type;d.textContent='[Sim] '+msg;
+  ls.insertBefore(d,ls.firstChild);while(ls.children.length>50)ls.removeChild(ls.lastChild);
+}
+
+// ── THINGSPEAK ───────────────────────────────────────────────────
+async function fetchTS(){
+  try{
+    const r=await fetch('https://api.thingspeak.com/channels/3319380/feeds/last.json?api_key=3BQ1OD53GIJD4NQ0',{signal:AbortSignal.timeout(5000)});
+    if(!r.ok)throw new Error();const d=await r.json();
+    const fmt=(v,f)=>f==='5'?'L'+v:parseFloat(v).toFixed(f==='7'?0:1)+(f==='1'?'%':f==='2'?'V':f==='3'?'A':f==='4'?'°C':f==='6'?'mV':f==='7'?' kg':'');
+    ['1','2','3','4','5','6','7','8'].forEach(f=>{const el=document.getElementById('tsf'+f);if(el)el.textContent=fmt(d['field'+f],f);});
+    document.getElementById('tstime').textContent='Updated: '+new Date(d.created_at).toLocaleString();
+  }catch{document.getElementById('tstime').textContent='Offline — ThingSpeak not reachable';}
+}
+
+// ── CLOCK ────────────────────────────────────────────────────────
+function tick(){const n=new Date();document.getElementById('hclock').textContent=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0')+':'+n.getSeconds().toString().padStart(2,'0');}
+setInterval(tick,1000);tick();
+
+// ── INIT ─────────────────────────────────────────────────────────
+window.onload=()=>{
+  initChart();
+  upd();
+  log('System ready — NMC811 96S1P · 63.6 kWh · Range model: SPC = 0.165/63.6 kWh per km','ok');
+  log('Select a driver profile to begin','info');
+  fetchTS();
+  setInterval(fetchTS,15000);
+};
+</script>
+</body>
+</html>

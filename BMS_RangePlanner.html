@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>BMS V2 · Range Planner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0e0e10;
+  --bg2:      #141416;
+  --bg3:      #1a1a1e;
+  --line:     #2a2a32;
+  --line2:    #383844;
+  --amber:    #e07b39;
+  --amber2:   #f0974f;
+  --amber-dim:#7a3d15;
+  --steel:    #4a7fa5;
+  --steel2:   #6699bb;
+  --warm:     #f2efe8;
+  --warm2:    #c8c5bc;
+  --warm3:    #7a7870;
+  --green:    #4aaa72;
+  --red:      #cc4444;
+  --purple:   #8866cc;
+  --f-head:   'Oswald', sans-serif;
+  --f-num:    'Bebas Neue', sans-serif;
+  --f-mono:   'IBM Plex Mono', monospace;
+  --f-body:   'Barlow', sans-serif;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--warm);
+  font-family: var(--f-body);
+  display: flex;
+  flex-direction: column;
+}
+
+body::after {
+  content:'';
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,0.004) 2px,rgba(255,255,255,0.004) 4px),
+    repeating-linear-gradient(-45deg,transparent,transparent 2px,rgba(255,255,255,0.004) 2px,rgba(255,255,255,0.004) 4px);
+}
+
+/* HEADER */
+header {
+  flex-shrink:0; z-index:100; position:relative;
+  height:50px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--line2);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px;
+}
+.brand { display:flex; align-items:center; gap:14px; }
+.brand-ring {
+  width:30px; height:30px; border-radius:50%;
+  border:1.5px solid var(--amber);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--f-body); font-size:11px; font-weight:600;
+  color:var(--amber);
+}
+.brand-title {
+  font-family:var(--f-head); font-size:15px; font-weight:600;
+  letter-spacing:3px; text-transform:uppercase;
+}
+.brand-sub { font-family:var(--f-mono); font-size:9px; color:var(--warm3); letter-spacing:1px; }
+
+.hdr-specs { display:flex; gap:24px; }
+.hs-v { font-family:var(--f-num); font-size:15px; letter-spacing:1px; color:var(--amber); }
+.hs-l { font-family:var(--f-mono); font-size:8px; color:var(--warm3); text-transform:uppercase; letter-spacing:1.5px; }
+
+.hdr-badge {
+  padding:4px 14px;
+  border:1px solid var(--amber-dim);
+  background:rgba(224,123,57,0.06);
+  font-family:var(--f-mono); font-size:9px;
+  color:var(--amber); letter-spacing:2px; text-transform:uppercase;
+}
+
+/* MAIN */
+main {
+  flex:1; overflow:hidden; position:relative; z-index:1;
+  display:grid;
+  grid-template-columns:320px 1fr;
+}
+
+/* LEFT PANEL */
+.left-panel {
+  background:var(--bg2);
+  border-right:1px solid var(--line2);
+  display:flex; flex-direction:column;
+  overflow-y:auto;
+  padding:18px 16px;
+  gap:14px;
+}
+
+.section {
+  background:var(--bg3);
+  border:1px solid var(--line);
+  padding:14px;
+}
+.section-hdr {
+  font-family:var(--f-mono); font-size:8px;
+  color:var(--amber); text-transform:uppercase; letter-spacing:2.5px;
+  margin-bottom:12px; padding-bottom:8px;
+  border-bottom:1px solid var(--line);
+}
+
+/* Profile selector */
+.prof-row { display:flex; flex-direction:column; gap:5px; }
+.prof-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 10px;
+  background:var(--bg2); border:1px solid var(--line);
+  cursor:pointer; transition:border-color 0.2s;
+  position:relative;
+}
+.prof-item::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background:transparent; transition:background 0.2s;
+}
+.prof-item:hover { border-color:var(--line2); }
+.prof-item.sel { border-color:var(--amber); }
+.prof-item.sel::before { background:var(--amber); }
+.prof-left { display:flex; align-items:center; gap:10px; }
+.prof-icon { font-size:16px; }
+.prof-name { font-family:var(--f-head); font-size:13px; font-weight:500; letter-spacing:1px; text-transform:uppercase; }
+.prof-mode { font-family:var(--f-mono); font-size:8px; text-transform:uppercase; letter-spacing:1px; }
+.eco-c { color:var(--green); }
+.bal-c { color:var(--steel2); }
+.per-c { color:var(--amber); }
+.prof-aeo { font-family:var(--f-num); font-size:16px; color:var(--amber); }
+.prof-aeo-l { font-family:var(--f-mono); font-size:7px; color:var(--warm3); text-align:right; }
+
+/* Sliders */
+.slider-block { margin-bottom:10px; }
+.slider-block:last-child { margin-bottom:0; }
+.slider-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.slider-label { font-family:var(--f-mono); font-size:9px; color:var(--warm3); text-transform:uppercase; letter-spacing:1.5px; }
+.slider-val { font-family:var(--f-num); font-size:18px; color:var(--amber); }
+input[type=range] { width:100%; accent-color:var(--amber); cursor:pointer; margin-bottom:3px; }
+.slider-bounds { display:flex; justify-content:space-between; font-family:var(--f-mono); font-size:7px; color:var(--warm3); }
+
+/* SoC track */
+.soc-track-wrap { margin-top:6px; }
+.soc-track {
+  height:20px; background:var(--bg2); position:relative; overflow:hidden;
+  border:1px solid var(--line);
+}
+.soc-track-fill {
+  position:absolute; top:0; bottom:0; left:0;
+  background:linear-gradient(90deg, var(--amber-dim), var(--amber));
+  transition:width 0.3s;
+}
+.soc-track-ceil {
+  position:absolute; top:0; bottom:0;
+  width:2px; background:rgba(255,255,255,0.3);
+  transition:left 0.3s;
+}
+.soc-track-lbl {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--f-mono); font-size:9px; color:#fff;
+}
+
+/* Drive mode cards */
+.drive-row { display:flex; gap:6px; }
+.drive-card {
+  flex:1; padding:10px 6px; text-align:center;
+  background:var(--bg2); border:1px solid var(--line);
+  cursor:pointer; transition:border-color 0.2s;
+  position:relative;
+}
+.drive-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:transparent; transition:background 0.2s;
+}
+.drive-card:hover { border-color:var(--line2); }
+.drive-card.sel { border-color:var(--amber); }
+.drive-card.sel::before { background:var(--amber); }
+.dc-icon { font-size:18px; margin-bottom:4px; }
+.dc-name { font-family:var(--f-head); font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; }
+.dc-cons { font-family:var(--f-mono); font-size:8px; color:var(--warm3); margin-top:2px; }
+
+/* Aux toggles */
+.aux-row { display:flex; flex-direction:column; gap:5px; }
+.aux-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:7px 9px;
+  background:var(--bg2); border:1px solid var(--line);
+  cursor:pointer; transition:border-color 0.2s;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.aux-item:hover { border-color:var(--line2); }
+.aux-item.on { border-color:rgba(224,123,57,0.4); background:rgba(224,123,57,0.04); }
+.aux-left { display:flex; align-items:center; gap:8px; }
+.aux-ico { font-size:14px; }
+.aux-nm { font-family:var(--f-head); font-size:11px; font-weight:500; letter-spacing:0.5px; }
+.aux-item.on .aux-nm { color:var(--amber); }
+.aux-pw { font-family:var(--f-mono); font-size:8px; color:var(--warm3); }
+.tog { width:26px; height:13px; background:var(--line2); position:relative; transition:background 0.2s; flex-shrink:0; }
+.aux-item.on .tog { background:var(--amber-dim); }
+.tog::after { content:''; position:absolute; top:2px; left:2px; width:9px; height:9px; background:var(--warm3); transition:transform 0.2s, background 0.2s; }
+.aux-item.on .tog::after { transform:translateX(13px); background:var(--amber); }
+
+/* RIGHT PANEL */
+.right-panel {
+  display:flex; flex-direction:column;
+  padding:14px; gap:12px; overflow:hidden;
+}
+
+/* Big range display */
+.range-display {
+  flex-shrink:0;
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+}
+.range-hero {
+  background:var(--bg3); border:1px solid var(--line);
+  padding:18px 20px;
+  position:relative;
+}
+.range-hero::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--amber-dim), var(--amber));
+}
+.rh-label { font-family:var(--f-mono); font-size:8px; color:var(--warm3); text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; }
+.rh-val { font-family:var(--f-num); font-size:52px; line-height:1; color:var(--amber); }
+.rh-unit { font-family:var(--f-mono); font-size:11px; color:var(--warm3); margin-top:2px; }
+
+.stat-card {
+  background:var(--bg3); border:1px solid var(--line);
+  padding:14px 16px;
+}
+.sc-label { font-family:var(--f-mono); font-size:8px; color:var(--warm3); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px; }
+.sc-val { font-family:var(--f-num); font-size:28px; line-height:1; }
+.sc-sub { font-family:var(--f-mono); font-size:9px; color:var(--warm2); margin-top:4px; }
+
+/* Breakdown card */
+.breakdown {
+  flex-shrink:0;
+  display:grid; grid-template-columns:repeat(5,1fr);
+  gap:8px;
+}
+.bk-item {
+  background:var(--bg3); border:1px solid var(--line);
+  padding:10px;
+}
+.bk-l { font-family:var(--f-mono); font-size:7px; color:var(--warm3); text-transform:uppercase; letter-spacing:1px; }
+.bk-v { font-family:var(--f-num); font-size:18px; margin-top:2px; }
+
+/* Chart */
+.chart-wrap {
+  flex:1;
+  background:var(--bg3); border:1px solid var(--line);
+  padding:12px; display:flex; flex-direction:column;
+  overflow:hidden; min-height:0;
+}
+.chart-top {
+  display:flex; justify-content:space-between; align-items:center;
+  flex-shrink:0; margin-bottom:8px;
+}
+.chart-label { font-family:var(--f-mono); font-size:8px; color:var(--warm3); text-transform:uppercase; letter-spacing:2px; }
+.chart-leg { display:flex; gap:12px; flex-wrap:wrap; }
+.leg-item { display:flex; align-items:center; gap:4px; }
+.leg-line { width:16px; height:2px; }
+.leg-text { font-family:var(--f-mono); font-size:8px; color:var(--warm2); }
+#range-chart { flex:1; min-height:0; }
+
+/* AEO window bar */
+.aeo-bar-wrap {
+  flex-shrink:0;
+  background:var(--bg3); border:1px solid var(--line);
+  padding:10px 14px;
+}
+.aeo-bar-hdr {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:6px;
+}
+.aeo-bar-label { font-family:var(--f-mono); font-size:8px; color:var(--warm3); text-transform:uppercase; letter-spacing:2px; }
+.aeo-bar-val { font-family:var(--f-num); font-size:14px; color:var(--amber); }
+.aeo-full-track {
+  height:16px; background:var(--bg); position:relative;
+  border:1px solid var(--line);
+}
+.aeo-window-fill {
+  position:absolute; top:0; bottom:0;
+  background:linear-gradient(90deg, var(--steel), var(--steel2));
+  transition:all 0.4s;
+}
+.aeo-soc-cursor {
+  position:absolute; top:-3px; bottom:-3px;
+  width:3px; background:var(--amber);
+  transition:left 0.3s;
+}
+.aeo-track-lbl {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--f-mono); font-size:8px; color:#fff;
+}
+.aeo-ticks {
+  display:flex; justify-content:space-between;
+  font-family:var(--f-mono); font-size:7px; color:var(--warm3);
+  margin-top:3px;
+}
+
+/* Footer */
+footer {
+  flex-shrink:0; z-index:100; position:relative;
+  height:28px;
+  background:var(--bg2); border-top:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  gap:24px;
+}
+.foot-item { font-family:var(--f-mono); font-size:8px; color:var(--warm3); letter-spacing:1px; }
+.foot-item span { color:var(--warm2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-ring">BMS</div>
+    <div>
+      <div class="brand-title">Range Planner</div>
+      <div class="brand-sub">AI-Driven BMS V2 · Guruprasath Suguraman · Germany</div>
+    </div>
+  </div>
+  <div class="hdr-specs">
+    <div><div class="hs-v">NMC811</div><div class="hs-l">Chemistry</div></div>
+    <div><div class="hs-v">96S1P</div><div class="hs-l">Topology</div></div>
+    <div><div class="hs-v">353.3V</div><div class="hs-l">Nominal</div></div>
+    <div><div class="hs-v">63.6 kWh</div><div class="hs-l">Gross</div></div>
+    <div><div class="hs-v">180 Ah</div><div class="hs-l">Capacity</div></div>
+  </div>
+  <div class="hdr-badge">Standalone · No MATLAB Required</div>
+</header>
+
+<main>
+
+  <!-- LEFT: Controls -->
+  <div class="left-panel">
+
+    <!-- Profile -->
+    <div class="section">
+      <div class="section-hdr">Driver Profile</div>
+      <div class="prof-row">
+        <div class="prof-item sel" id="p0" onclick="setProfile(0,this)">
+          <div class="prof-left">
+            <div class="prof-icon">🌿</div>
+            <div>
+              <div class="prof-name">Driver 1</div>
+              <div class="prof-mode eco-c">Eco</div>
+            </div>
+          </div>
+          <div>
+            <div class="prof-aeo">78%</div>
+            <div class="prof-aeo-l">AEO Ceiling</div>
+          </div>
+        </div>
+        <div class="prof-item" id="p1" onclick="setProfile(1,this)">
+          <div class="prof-left">
+            <div class="prof-icon">⚡</div>
+            <div>
+              <div class="prof-name">Driver 2</div>
+              <div class="prof-mode bal-c">Balanced</div>
+            </div>
+          </div>
+          <div>
+            <div class="prof-aeo">85%</div>
+            <div class="prof-aeo-l">AEO Ceiling</div>
+          </div>
+        </div>
+        <div class="prof-item" id="p2" onclick="setProfile(2,this)">
+          <div class="prof-left">
+            <div class="prof-icon">🏎️</div>
+            <div>
+              <div class="prof-name">Driver 3</div>
+              <div class="prof-mode per-c">Performance</div>
+            </div>
+          </div>
+          <div>
+            <div class="prof-aeo">92%</div>
+            <div class="prof-aeo-l">AEO Ceiling</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current SoC -->
+    <div class="section">
+      <div class="section-hdr">Current State of Charge</div>
+      <div class="slider-block">
+        <div class="slider-row">
+          <div class="slider-label">SoC</div>
+          <div class="slider-val" id="soc-val">84%</div>
+        </div>
+        <input type="range" id="sld-soc" min="10" max="100" value="84" step="1" oninput="setSoC(this.value)">
+        <div class="slider-bounds"><span>10% (Min)</span><span>100%</span></div>
+      </div>
+      <div class="soc-track-wrap">
+        <div class="soc-track">
+          <div class="soc-track-fill" id="soc-fill"></div>
+          <div class="soc-track-ceil" id="soc-ceil"></div>
+          <div class="soc-track-lbl" id="soc-track-lbl">SoC: 84% · AEO: 78%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Temperature -->
+    <div class="section">
+      <div class="section-hdr">Ambient Temperature</div>
+      <div class="slider-block">
+        <div class="slider-row">
+          <div class="slider-label">Temperature</div>
+          <div class="slider-val" id="temp-val" style="color:var(--amber)">22°C</div>
+        </div>
+        <input type="range" id="sld-temp" min="-10" max="40" value="22" step="1" oninput="setTemp(this.value)">
+        <div class="slider-bounds"><span>-10°C (Winter)</span><span>40°C (Summer)</span></div>
+      </div>
+      <div style="margin-top:6px;font-family:var(--f-mono);font-size:8px;color:var(--warm3);padding:5px 8px;border-left:2px solid var(--line2)">
+        Temperature factor: <span id="kt-val" style="color:var(--amber2)">1.00×</span> · Below 10°C: winter derating active
+      </div>
+    </div>
+
+    <!-- Drive Mode -->
+    <div class="section">
+      <div class="section-hdr">Drive Mode</div>
+      <div class="drive-row">
+        <div class="drive-card sel" id="dc-city" onclick="setDrive('city',this)">
+          <div class="dc-icon">🏙️</div>
+          <div class="dc-name">City</div>
+          <div class="dc-cons">20.0 kWh/100km</div>
+        </div>
+        <div class="drive-card" id="dc-highway" onclick="setDrive('highway',this)">
+          <div class="dc-icon">🛣️</div>
+          <div class="dc-name">Highway</div>
+          <div class="dc-cons">18.0 kWh/100km</div>
+        </div>
+        <div class="drive-card" id="dc-long" onclick="setDrive('long',this)">
+          <div class="dc-icon">🗺️</div>
+          <div class="dc-name">Long Trip</div>
+          <div class="dc-cons">22.0 kWh/100km</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auxiliary Loads -->
+    <div class="section">
+      <div class="section-hdr">Auxiliary Power Loads</div>
+      <div class="aux-row">
+        <div class="aux-item on" id="aux-ac" onclick="togAux('ac',this)">
+          <div class="aux-left">
+            <div class="aux-ico">❄️</div>
+            <div><div class="aux-nm">Air Conditioning</div><div class="aux-pw">1.5 kW</div></div>
+          </div>
+          <div class="tog"></div>
+        </div>
+        <div class="aux-item on" id="aux-lights" onclick="togAux('lights',this)">
+          <div class="aux-left">
+            <div class="aux-ico">💡</div>
+            <div><div class="aux-nm">Headlights</div><div class="aux-pw">0.15 kW</div></div>
+          </div>
+          <div class="tog"></div>
+        </div>
+        <div class="aux-item" id="aux-audio" onclick="togAux('audio',this)">
+          <div class="aux-left">
+            <div class="aux-ico">🎵</div>
+            <div><div class="aux-nm">Audio System</div><div class="aux-pw">0.10 kW</div></div>
+          </div>
+          <div class="tog"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Output -->
+  <div class="right-panel">
+
+    <!-- Big numbers -->
+    <div class="range-display">
+      <div class="range-hero">
+        <div class="rh-label">Estimated Range</div>
+        <div class="rh-val" id="out-range">221</div>
+        <div class="rh-unit">kilometres from current SoC</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">CO₂ Saved vs Petrol</div>
+        <div class="sc-val" id="out-co2" style="color:var(--green)">13.8</div>
+        <div class="sc-sub" id="out-co2-sub">kg · for this trip distance</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Consumption</div>
+        <div class="sc-val" id="out-cons" style="color:var(--steel2)">19.2</div>
+        <div class="sc-sub">kWh / 100 km</div>
+      </div>
+    </div>
+
+    <!-- Breakdown -->
+    <div class="breakdown">
+      <div class="bk-item">
+        <div class="bk-l">Energy Available</div>
+        <div class="bk-v" id="bk-e" style="color:var(--amber)">0.0</div>
+        <div style="font-family:var(--f-mono);font-size:7px;color:var(--warm3)">kWh</div>
+      </div>
+      <div class="bk-item">
+        <div class="bk-l">Base Consumption</div>
+        <div class="bk-v" id="bk-base" style="color:var(--warm2)">18.0</div>
+        <div style="font-family:var(--f-mono);font-size:7px;color:var(--warm3)">kWh/100km</div>
+      </div>
+      <div class="bk-item">
+        <div class="bk-l">Temp Factor</div>
+        <div class="bk-v" id="bk-kt" style="color:var(--warm2)">1.00</div>
+        <div style="font-family:var(--f-mono);font-size:7px;color:var(--warm3)">multiplier</div>
+      </div>
+      <div class="bk-item">
+        <div class="bk-l">Aux Load</div>
+        <div class="bk-v" id="bk-aux" style="color:var(--warm2)">1.65</div>
+        <div style="font-family:var(--f-mono);font-size:7px;color:var(--warm3)">kW total</div>
+      </div>
+      <div class="bk-item">
+        <div class="bk-l">Regen Recovery</div>
+        <div class="bk-v" id="bk-regen" style="color:var(--green)">25%</div>
+        <div style="font-family:var(--f-mono);font-size:7px;color:var(--warm3)">braking energy</div>
+      </div>
+    </div>
+
+    <!-- AEO window bar -->
+    <div class="aeo-bar-wrap">
+      <div class="aeo-bar-hdr">
+        <div class="aeo-bar-label">AEO Charge Window &amp; Current SoC</div>
+        <div class="aeo-bar-val" id="aeo-bar-val">15% – 78% · SoC: 84%</div>
+      </div>
+      <div class="aeo-full-track">
+        <div class="aeo-window-fill" id="aeo-win-fill"></div>
+        <div class="aeo-soc-cursor" id="aeo-soc-cursor"></div>
+        <div class="aeo-track-lbl" id="aeo-track-lbl">AEO Window: 15% – 78%</div>
+      </div>
+      <div class="aeo-ticks">
+        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+      </div>
+    </div>
+
+    <!-- Chart: Range vs Temperature -->
+    <div class="chart-wrap">
+      <div class="chart-top">
+        <div class="chart-label">Range vs Temperature — all SoC levels</div>
+        <div class="chart-leg">
+          <div class="leg-item"><div class="leg-line" style="background:#cc4444"></div><div class="leg-text">SoC 50%</div></div>
+          <div class="leg-item"><div class="leg-line" style="background:#e07b39"></div><div class="leg-text">SoC 70%</div></div>
+          <div class="leg-item"><div class="leg-line" style="background:#4a7fa5"></div><div class="leg-text">SoC 84% ← current</div></div>
+          <div class="leg-item"><div class="leg-line" style="background:#4aaa72"></div><div class="leg-text">SoC 100%</div></div>
+        </div>
+      </div>
+      <canvas id="range-chart"></canvas>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="foot-item">Pack: <span>NMC811 96S1P</span></div>
+  <div class="foot-item">Gross Energy: <span>63.6 kWh</span></div>
+  <div class="foot-item">Usable Window: <span>10% – 90%</span></div>
+  <div class="foot-item">Rint (fresh): <span>19.2 mΩ</span></div>
+  <div class="foot-item">Reference: <span>BMW i4 eDrive40 class</span></div>
+  <div class="foot-item">Author: <span>Guruprasath Suguraman</span></div>
+</footer>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────
+const PROFS = [
+  { name:'Driver 1', lbl:'Eco',         icon:'🌿', aeo:0.78, sMin:0.15 },
+  { name:'Driver 2', lbl:'Balanced',    icon:'⚡', aeo:0.85, sMin:0.10 },
+  { name:'Driver 3', lbl:'Performance', icon:'🏎️', aeo:0.92, sMin:0.10 },
+];
+
+const DRIVES = {
+  city:    { base:0.200, v:30,  regen:0.25, lbl:'City' },
+  highway: { base:0.180, v:110, regen:0.05, lbl:'Highway' },
+  long:    { base:0.220, v:130, regen:0.03, lbl:'Long Trip' },
+};
+
+const GROSS_KWH = 63.6;
+
+// Temperature correction (NMC811, liquid cooled)
+function kTemp(T) {
+  const tr = [-20,-10, 0,10,20,25,30,35,40,45];
+  const kr = [.60, .70,.80,.88,.96,1.00,1.01,1.02,1.02,.99];
+  for (let i = 1; i < tr.length; i++) {
+    if (T <= tr[i]) {
+      const f = (T - tr[i-1]) / (tr[i] - tr[i-1]);
+      return kr[i-1] + f * (kr[i] - kr[i-1]);
+    }
+  }
+  return 0.99;
+}
+
+// Aux power [W]
+function auxWatts() {
+  let p = 180;
+  if (state.aux.ac)     p += 1500;
+  if (state.aux.lights) p += 150;
+  if (state.aux.audio)  p += 100;
+  return p;
+}
+
+// ─── State ────────────────────────────────────────────────────────
+let state = {
+  profIdx: 0,
+  SoC:     0.84,
+  T:       22,
+  drive:   'city',
+  aux:     { ac:true, lights:true, audio:false },
+};
+
+// ─── Core range formula ───────────────────────────────────────────
+function calcRange(SoC, T, drive, auxW, profIdx) {
+  const d   = DRIVES[drive];
+  const kt  = kTemp(T);
+  const p   = PROFS[profIdx];
+  const sMin = p.sMin;
+
+  // Available energy from current SoC down to profile minimum
+  const usable = Math.max(0, SoC - sMin);
+  const E_kWh  = usable * GROSS_KWH;
+
+  // Aux load addition to per-km consumption
+  const ka   = (auxW / 1000) / d.v;
+
+  // Net consumption after regen
+  const cons = (d.base / kt + ka) * (1 - d.regen);
+
+  const range = cons > 0 ? E_kWh / cons : 0;
+  return { range: Math.max(0, range), cons, kt, E_kWh };
+}
+
+// CO2 saved vs petrol (120 g/km ICE reference, EU grid 295 g/kWh)
+function calcCO2(range_km, cons_kWh_per_km) {
+  const petrol_g = range_km * 120;
+  const ev_g     = range_km * cons_kWh_per_km * 295;
+  return Math.max(0, (petrol_g - ev_g) / 1000);
+}
+
+// ─── Update everything ────────────────────────────────────────────
+function update() {
+  const p     = PROFS[state.profIdx];
+  const auxW  = auxWatts();
+  const d     = DRIVES[state.drive];
+  const T     = state.T;
+  const SoC   = state.SoC;
+  const { range, cons, kt, E_kWh } = calcRange(SoC, T, state.drive, auxW, state.profIdx);
+  const co2   = calcCO2(range, cons);
+
+  // Big readouts
+  document.getElementById('out-range').textContent = Math.round(range);
+  document.getElementById('out-co2').textContent   = co2.toFixed(1);
+  document.getElementById('out-co2-sub').textContent = `kg · for ${Math.round(range)} km trip`;
+  document.getElementById('out-cons').textContent  = (cons * 100).toFixed(1);
+
+  // Breakdown
+  document.getElementById('bk-e').textContent     = E_kWh.toFixed(1);
+  document.getElementById('bk-base').textContent  = (d.base * 100).toFixed(1);
+  document.getElementById('bk-kt').textContent    = kt.toFixed(2);
+  document.getElementById('bk-aux').textContent   = (auxW / 1000).toFixed(2);
+  document.getElementById('bk-regen').textContent = Math.round(d.regen * 100) + '%';
+
+  // Temperature factor
+  document.getElementById('kt-val').textContent = kt.toFixed(2) + '×';
+  document.getElementById('kt-val').style.color = kt < 0.85 ? 'var(--red)' : kt < 0.95 ? 'var(--amber)' : 'var(--amber2)';
+
+  // AEO window bar
+  const aeoMin = Math.round(p.sMin * 100);
+  const aeoMax = Math.round(p.aeo * 100);
+  const socPct = Math.round(SoC * 100);
+  document.getElementById('aeo-win-fill').style.left  = aeoMin + '%';
+  document.getElementById('aeo-win-fill').style.right = (100 - aeoMax) + '%';
+  document.getElementById('aeo-soc-cursor').style.left = socPct + '%';
+  document.getElementById('aeo-bar-val').textContent  = `${aeoMin}% – ${aeoMax}% · SoC: ${socPct}%`;
+  document.getElementById('aeo-track-lbl').textContent = `AEO Window: ${aeoMin}% – ${aeoMax}% · SoC: ${socPct}%`;
+
+  // SoC track
+  document.getElementById('soc-fill').style.width = socPct + '%';
+  document.getElementById('soc-ceil').style.left  = aeoMax + '%';
+  document.getElementById('soc-track-lbl').textContent = `SoC: ${socPct}% · AEO Ceiling: ${aeoMax}%`;
+
+  // KPI colours
+  const rangeEl = document.getElementById('out-range');
+  rangeEl.style.color = range > 200 ? 'var(--amber)' : range > 100 ? 'var(--amber)' : 'var(--red)';
+
+  // Update chart current-SoC line
+  updateChartCurrentLine(SoC, T, state.drive, auxW, state.profIdx);
+}
+
+// ─── Chart ────────────────────────────────────────────────────────
+let rangeChart = null;
+const T_AXIS = Array.from({ length: 26 }, (_, i) => i - 10); // -10 to 15... actually -10 to 40 step 2
+const T_RANGE = [];
+for (let t = -10; t <= 40; t += 2) T_RANGE.push(t);
+
+function buildChartData(SoC_current, drive, auxW_current, profIdx) {
+  const socs    = [0.50, 0.70, SoC_current, 1.00];
+  const colors  = ['#cc4444','#e07b39','#4a7fa5','#4aaa72'];
+  const widths  = [1.5, 1.5, 2.5, 1.5];
+  const dashes  = [[], [], [], []];
+
+  return socs.map((soc, i) => ({
+    label:       `SoC ${Math.round(soc * 100)}%`,
+    data:        T_RANGE.map(T => {
+      const aw = i === 2 ? auxW_current : auxW_current; // keep aux same for all lines
+      const { range } = calcRange(soc, T, drive, aw, profIdx);
+      return Math.round(range);
+    }),
+    borderColor:     colors[i],
+    borderWidth:     widths[i],
+    pointRadius:     T_RANGE.map(t => t === Math.round(22) ? 0 : 0),
+    fill:            false,
+    tension:         0.3,
+    borderDash:      dashes[i],
+  }));
+}
+
+function initChart() {
+  const ctx = document.getElementById('range-chart').getContext('2d');
+  rangeChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels:   T_RANGE,
+      datasets: buildChartData(state.SoC, state.drive, auxWatts(), state.profIdx),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => `${items[0].label}°C`,
+            label:  item  => `${item.dataset.label}: ${item.raw} km`,
+          },
+          backgroundColor: '#1a1a1e',
+          borderColor:     '#383844',
+          borderWidth:     1,
+          titleColor:      '#7a7870',
+          bodyColor:       '#f2efe8',
+          titleFont:       { family:'IBM Plex Mono', size:9 },
+          bodyFont:        { family:'IBM Plex Mono', size:9 },
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Ambient Temperature (°C)',
+            color: '#7a7870',
+            font: { family:'IBM Plex Mono', size:9 },
+          },
+          ticks: { color:'#3a3a44', font:{ family:'IBM Plex Mono', size:9 } },
+          grid:  { color:'rgba(42,42,50,0.8)' },
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Estimated Range (km)',
+            color: '#7a7870',
+            font: { family:'IBM Plex Mono', size:9 },
+          },
+          ticks: { color:'#3a3a44', font:{ family:'IBM Plex Mono', size:9 } },
+          grid:  { color:'rgba(42,42,50,0.8)' },
+          min: 0,
+        },
+      },
+    },
+  });
+
+  // Vertical line at current temperature
+  addTempPlugin();
+}
+
+function updateChartCurrentLine(SoC, T, drive, auxW, profIdx) {
+  if (!rangeChart) return;
+  rangeChart.data.datasets = buildChartData(SoC, drive, auxW, profIdx);
+  // Update the current-SoC dataset label
+  rangeChart.data.datasets[2].label = `SoC ${Math.round(SoC*100)}% ← current`;
+  rangeChart.data.datasets[2].borderWidth = 2.5;
+  rangeChart.options.plugins.annotation = { annotations: { tempLine: {
+    type: 'line', xMin: T, xMax: T,
+    borderColor: 'rgba(224,123,57,0.4)', borderWidth: 1, borderDash: [4,4],
+  }}};
+  rangeChart.update('none');
+}
+
+function addTempPlugin() {
+  // Draw a vertical dashed line at current temperature
+  Chart.register({
+    id: 'tempLine',
+    afterDraw(chart) {
+      const { ctx, scales:{ x, y } } = chart;
+      const T = state.T;
+      if (T < x.min || T > x.max) return;
+      const xPos = x.getPixelForValue(T);
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(224,123,57,0.5)';
+      ctx.lineWidth = 1;
+      ctx.moveTo(xPos, y.top);
+      ctx.lineTo(xPos, y.bottom);
+      ctx.stroke();
+      ctx.restore();
+    },
+  });
+}
+
+// ─── Controls ─────────────────────────────────────────────────────
+function setProfile(idx, el) {
+  state.profIdx = idx;
+  document.querySelectorAll('.prof-item').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  update();
+}
+
+function setSoC(v) {
+  state.SoC = parseInt(v) / 100;
+  document.getElementById('soc-val').textContent = v + '%';
+  update();
+}
+
+function setTemp(v) {
+  state.T = parseInt(v);
+  const sign = v > 0 ? '' : '';
+  document.getElementById('temp-val').textContent = v + '°C';
+  update();
+}
+
+function setDrive(d, el) {
+  state.drive = d;
+  document.querySelectorAll('.drive-card').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  update();
+}
+
+function togAux(k, el) {
+  state.aux[k] = !state.aux[k];
+  el.classList.toggle('on', state.aux[k]);
+  update();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────
+window.onload = () => {
+  initChart();
+  update();
+};
+</script>
+</body>
+</html>
